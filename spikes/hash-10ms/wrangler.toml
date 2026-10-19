@@ -1,0 +1,14 @@
+name = "beek-spike-hash"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# Durable Object pour mesurer le temps de calcul d'un hachage dans un DO,
+# sur le plan gratuit. Sur ce plan, une classe DO doit utiliser le backend
+# SQLite, declare par new_sqlite_classes.
+[[durable_objects.bindings]]
+name = "HASH_DO"
+class_name = "HashDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["HashDO"]
