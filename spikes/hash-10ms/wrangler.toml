@@ -2,13 +2,11 @@ name = "beek-spike-hash"
 main = "src/worker.js"
 compatibility_date = "2025-09-01"
 
-# Durable Object pour mesurer le temps de calcul d'un hachage dans un DO,
-# sur le plan gratuit. Sur ce plan, une classe DO doit utiliser le backend
-# SQLite, declare par new_sqlite_classes.
-[[durable_objects.bindings]]
-name = "HASH_DO"
-class_name = "HashDO"
+# Pas de Durable Object dans ce premier deploiement. Sur le plan gratuit
+# sans carte, les DO peuvent ne pas etre disponibles. On mesure d'abord le
+# hachage sur un Worker simple. La route /hash-do reste inactive.
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["HashDO"]
+# Journaux d'invocation, pour lire le temps CPU par requete dans le tableau
+# de bord Cloudflare. Inclus dans le plan gratuit, retention de 3 jours.
+[observability]
+enabled = true

@@ -51,6 +51,12 @@ export default {
     }
 
     if (url.pathname === "/hash-do") {
+      if (!env.HASH_DO) {
+        return new Response(
+          "Durable Object non active sur ce deploiement. Utilisez /hash et /sweep.",
+          { headers: { "content-type": "text/plain; charset=utf-8" } }
+        );
+      }
       const id = env.HASH_DO.idFromName("spike");
       return env.HASH_DO.get(id).fetch(request);
     }
