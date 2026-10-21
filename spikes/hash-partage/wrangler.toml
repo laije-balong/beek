@@ -1,0 +1,12 @@
+name = "beek-spike-hash-partage"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# Journaux d'invocation, pour lire le temps CPU du serveur dans le tableau de bord.
+[observability]
+enabled = true
+
+# Poivre de test pour le spike seulement. En production, le poivre est un secret
+# pose par "wrangler secret put PEPPER", jamais dans la configuration ni dans la base.
+[vars]
+PEPPER_TEST = "spike-poivre-pas-pour-la-production"
