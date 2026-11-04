@@ -1,6 +1,6 @@
 # Proposition : simplification pour 5 apprenants
 
-Le projet vise 5 apprenants actifs, décidé le 22/10/2026, et non plus 30. Cette proposition allège les règles d'échelle en conséquence. Elle modifie des exigences, donc elle demande la validation du porteur avant d'être appliquée. Statut : à valider.
+Le projet vise 5 apprenants actifs, décidé le 22/10/2026, et non plus 30. Cette proposition allège les règles d'échelle en conséquence. Elle modifie des exigences, donc elle demande la validation du porteur avant d'être appliquée. Statut : validée le 04/11/2026 par le porteur. Une seule base D1.
 
 ## Pourquoi
 
