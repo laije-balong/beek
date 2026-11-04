@@ -12,6 +12,7 @@ enabled = true
 binding = "DB"
 database_name = "beek"
 database_id = "A_REMPLIR"
+migrations_dir = "migrations"
 
 # Images des exercices, 200 Ko au plus.
 # L'identifiant est pose par le porteur apres "wrangler kv namespace create IMAGES".
