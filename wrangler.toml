@@ -1,0 +1,20 @@
+name = "beek"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+# Base D1 unique, selon la simplification pour 5 apprenants.
+# L'identifiant est pose par le porteur apres "wrangler d1 create beek".
+[[d1_databases]]
+binding = "DB"
+database_name = "beek"
+database_id = "A_REMPLIR"
+
+# Images des exercices, 200 Ko au plus.
+# L'identifiant est pose par le porteur apres "wrangler kv namespace create IMAGES".
+[[kv_namespaces]]
+binding = "IMAGES"
+id = "A_REMPLIR"

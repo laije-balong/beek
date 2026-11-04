@@ -1,0 +1,13 @@
+name = "beek-spike-ecritures"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+[observability]
+enabled = true
+
+# Base D1 de test. Creez-la avec "wrangler d1 create beek-spike-ecritures",
+# puis collez l'identifiant renvoye dans database_id ci-dessous.
+[[d1_databases]]
+binding = "DB"
+database_name = "beek-spike-ecritures"
+database_id = "A_REMPLIR_APRES_wrangler_d1_create"

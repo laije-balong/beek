@@ -1,0 +1,6 @@
+/analyse BA
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.log
