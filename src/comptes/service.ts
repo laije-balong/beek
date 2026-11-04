@@ -219,4 +219,12 @@ export class ServiceComptes {
     compte.expirationMotDePasseTemporaire = null;
     await this.#depot.mettreAJour(compte);
   }
+
+  // Sel a renvoyer avant une connexion. Le sel du compte s'il existe, un sel
+  // fictif stable sinon, pour ne pas reveler quelles adresses ont un compte.
+  async selPourConnexion(email: string): Promise<Uint8Array> {
+    const emailNorm = email.trim().toLowerCase();
+    const compte = await this.#depot.parEmail(emailNorm);
+    return this.#auth.selPourAdresse(emailNorm, compte ? compte.sel : null);
+  }
 }
