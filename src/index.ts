@@ -1,11 +1,6 @@
 import { Hono } from "hono";
 
-type Bindings = {
-  DB: D1Database;
-  IMAGES: KVNamespace;
-};
-
-const app = new Hono<{ Bindings: Bindings }>();
+const app = new Hono();
 
 // Route de sante, pour verifier que le socle repond.
 app.get("/sante", (c) => c.json({ ok: true, service: "beek" }));
