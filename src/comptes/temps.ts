@@ -8,6 +8,7 @@ export const horlogeSysteme: Horloge = {
 };
 
 export const SEPT_JOURS = 7 * 24 * 60 * 60 * 1000;
+export const QUINZE_MINUTES = 15 * 60 * 1000;
 
 // Jour calendaire a Brazzaville, UTC+1 sans heure d'ete, au format AAAA-MM-JJ.
 export function jourBrazzaville(epochMs: number): string {

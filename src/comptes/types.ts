@@ -29,6 +29,7 @@ export interface Compte {
   dateConsentement: number | null;
   echecsConnexion: number;
   finBlocage: number | null;
+  statutAvantBlocage: StatutCompte | null;
   motsDePasseTemporairesDuJour: number;
   jourDesMotsDePasseTemporaires: string | null;
 }
