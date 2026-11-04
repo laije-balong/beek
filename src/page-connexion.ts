@@ -44,6 +44,12 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <button id="btnConnexion">Se connecter</button>
 </fieldset>
 
+<fieldset>
+<legend>Session</legend>
+<button id="btnMoi">Qui suis-je</button>
+<button id="btnDeco">Se deconnecter</button>
+</fieldset>
+
 <script>
 function hex(a){var s='';for(var i=0;i<a.length;i++)s+=a[i].toString(16).padStart(2,'0');return s;}
 function fromHex(h){var o=new Uint8Array(h.length/2);for(var i=0;i<o.length;i++)o[i]=parseInt(h.slice(i*2,i*2+2),16);return o;}
@@ -81,6 +87,15 @@ document.getElementById('btnConnexion').onclick=async function(){
     var d=await r.json();
     afficher(d.ok?('Connexion reussie, bonjour '+d.nom):('Erreur : '+d.erreur));
   }catch(e){afficher('Erreur : '+e);}
+};
+
+document.getElementById('btnMoi').onclick=async function(){
+  var r=await fetch('/moi');
+  if(r.status===200){var d=await r.json();afficher('Connecte : '+d.nom+' ('+d.role+')');}else{afficher('Non connecte.');}
+};
+document.getElementById('btnDeco').onclick=async function(){
+  await fetch('/auth/deconnexion',{method:'POST'});
+  afficher('Deconnecte.');
 };
 </script>
 </body>

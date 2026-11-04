@@ -227,4 +227,9 @@ export class ServiceComptes {
     const compte = await this.#depot.parEmail(emailNorm);
     return this.#auth.selPourAdresse(emailNorm, compte ? compte.sel : null);
   }
+
+  // Compte par identifiant, pour resoudre une session.
+  async compte(id: string): Promise<Compte | null> {
+    return this.#depot.parId(id);
+  }
 }

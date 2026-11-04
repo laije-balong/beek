@@ -1,12 +1,30 @@
 import { Hono } from "hono";
-import { construireServiceComptes, type Env } from "./fabrique";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import {
+  construireServiceComptes,
+  construireSignataireSession,
+  type Env,
+} from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
+import { DUREE_SESSION } from "./auth/session";
 import { toHex, fromHex } from "./util/hex";
 import { PAGE_CONNEXION } from "./page-connexion";
 
 type Bindings = Env & { AUTORISER_SEED?: string };
 
 const app = new Hono<{ Bindings: Bindings }>();
+
+// Options du cookie de session. Secure seulement en HTTPS, pour que le cookie
+// fonctionne aussi en local sur http://localhost.
+function optionsCookie(url: string) {
+  return {
+    httpOnly: true,
+    sameSite: "Lax" as const,
+    path: "/",
+    secure: new URL(url).protocol === "https:",
+    maxAge: Math.floor(DUREE_SESSION / 1000),
+  };
+}
 
 // Route de sante.
 app.get("/sante", (c) => c.json({ ok: true, service: "beek" }));
@@ -43,12 +61,18 @@ app.post("/auth/activation", async (c) => {
   }
 });
 
-// Connexion d'un compte actif.
+// Connexion d'un compte actif. Pose un cookie de session.
 app.post("/auth/connexion", async (c) => {
   const corps = await c.req.json<{ email: string; resultatHex: string }>();
   const service = construireServiceComptes(c.env);
   try {
     const compte = await service.connexion(corps.email, fromHex(corps.resultatHex));
+    const jeton = await construireSignataireSession(c.env).creer(
+      compte.id,
+      compte.role,
+      Date.now()
+    );
+    setCookie(c, "session", jeton, optionsCookie(c.req.url));
     return c.json({ ok: true, nom: compte.nom, role: compte.role });
   } catch (e) {
     if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
@@ -75,6 +99,32 @@ app.post("/auth/changement", async (c) => {
     if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
     throw e;
   }
+});
+
+// Utilisateur de la session en cours. Renouvelle la session a chaque appel,
+// ce qui donne l'expiration apres 2 heures d'inactivite.
+app.get("/moi", async (c) => {
+  const jeton = getCookie(c, "session");
+  if (!jeton) return c.json({ erreur: "non connecte" }, 401);
+  const signataire = construireSignataireSession(c.env);
+  const maintenant = Date.now();
+  const session = await signataire.lire(jeton, maintenant);
+  if (!session) return c.json({ erreur: "non connecte" }, 401);
+  const compte = await construireServiceComptes(c.env).compte(session.id);
+  if (!compte) return c.json({ erreur: "non connecte" }, 401);
+  setCookie(
+    c,
+    "session",
+    await signataire.creer(session.id, session.role, maintenant),
+    optionsCookie(c.req.url)
+  );
+  return c.json({ nom: compte.nom, role: compte.role });
+});
+
+// Deconnexion.
+app.post("/auth/deconnexion", (c) => {
+  deleteCookie(c, "session", { path: "/" });
+  return c.json({ ok: true });
 });
 
 // Creation d'un apprenant de test. Reservee au developpement, gardee par une
