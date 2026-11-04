@@ -1,3 +1,8 @@
+import {
+  LONGUEUR_MIN,
+  MOTS_DE_PASSE_COURANTS,
+} from "./auth/politique-mot-de-passe";
+
 // Page de test de l'inscription et de la connexion. Le hachage lent PBKDF2 a
 // 600 000 iterations se fait ici, dans le navigateur. Le serveur ne recoit que
 // le resultat. Cette page sert aux premiers essais de bout en bout.
@@ -64,6 +69,10 @@ function fromHex(h){var o=new Uint8Array(h.length/2);for(var i=0;i<o.length;i++)
 function afficher(t){document.getElementById('resultat').textContent=t;}
 async function selPour(email){var r=await fetch('/auth/sel?email='+encodeURIComponent(email));var d=await r.json();return fromHex(d.selHex);}
 async function pbkdf2(mdp,sel){var km=await crypto.subtle.importKey('raw',new TextEncoder().encode(mdp),'PBKDF2',false,['deriveBits']);var bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:sel,iterations:600000,hash:'SHA-256'},km,256);return hex(new Uint8Array(bits));}
+// RG-08, porte par le navigateur (ET-AUTH-16). La liste vient du module serveur.
+var MDP_MIN=${LONGUEUR_MIN};
+var MDP_COURANTS=${JSON.stringify(MOTS_DE_PASSE_COURANTS)};
+function refusMdp(m){if(m.length<MDP_MIN)return 'Le mot de passe compte au moins 8 caracteres.';if(MDP_COURANTS.indexOf(m.toLowerCase())>=0)return 'Ce mot de passe est trop courant. Choisissez-en un autre.';return null;}
 
 document.getElementById('btnTest').onclick=async function(){
   afficher('Creation...');
@@ -77,8 +86,11 @@ document.getElementById('btnActiver').onclick=async function(){
   try{
     afficher('Activation...');
     var email=document.getElementById('a-email').value;
+    var mdpClair=document.getElementById('a-mdp').value;
+    var refus=refusMdp(mdpClair);
+    if(refus){afficher('Erreur : '+refus);return;}
     var sel=await selPour(email);
-    var resultatHex=await pbkdf2(document.getElementById('a-mdp').value,sel);
+    var resultatHex=await pbkdf2(mdpClair,sel);
     var r=await fetch('/auth/activation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,motDePasseTemporaire:document.getElementById('a-temp').value,resultatHex:resultatHex,seizeAns:document.getElementById('a-seize').checked,traitementDonnees:document.getElementById('a-donnees').checked})});
     var d=await r.json();
     if(d.ok){document.getElementById('c-email').value=email;document.getElementById('c-mdp').value=document.getElementById('a-mdp').value;afficher('Compte active. Les champs de connexion sont pre-remplis, cliquez sur Se connecter.');}else{afficher('Erreur : '+d.erreur);}
