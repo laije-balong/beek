@@ -12,6 +12,14 @@ Le travail avance par itérations. Chaque itération livre un lot cohérent avec
 
 Claude ne committe pas et ne pousse pas. Claude fournit le contenu de chaque commit, le porteur committe. Une fusion n'a lieu que si les tests sont au vert et la relecture faite.
 
+## Branches et dépendances
+
+Un gros lot ou une grosse fonction se développe sur une branche dédiée. Dès que la branche en cours est validée, on passe à une nouvelle branche pour le lot suivant. On peut revenir à une ancienne branche si une contrainte l'exige, par exemple une mise à jour qui oblige à repartir d'une version antérieure.
+
+Le porteur crée les branches et committe. Claude indique, avec chaque contenu de commit, la branche visée.
+
+Les dépendances restent cohérentes. Une dépendance nouvelle s'aligne sur les versions déjà en place, et sa compatibilité est vérifiée avant l'ajout. On ne mélange pas des versions qui jurent, comme les types Workers en version 5 et le pool Vitest qui réclamait wrangler 3.
+
 ## Autorité des documents
 
 Les documents de référence sont dans docs/, en Markdown, en lecture seule. Ce sont le BRD v1.4, la spécification fonctionnelle v1.4, le référentiel des types d'exercices v1.1, et les maquettes des lots 1 à 4. En cas d'écart entre le code et ces documents, les documents font foi. Toute modification d'une exigence passe par une proposition écrite que le porteur valide. Une règle absente des documents se demande au porteur, elle ne s'invente pas.
