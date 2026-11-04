@@ -142,6 +142,40 @@ app.post("/dev/creer-apprenant", async (c) => {
   }
 });
 
+// Bootstrap d'un formateur de test. Reserve au developpement.
+app.post("/dev/creer-formateur", async (c) => {
+  if (c.env.AUTORISER_SEED !== "1") return c.json({ erreur: "indisponible" }, 404);
+  const corps = await c.req.json<{ email: string; nom: string }>();
+  const service = construireServiceComptes(c.env);
+  try {
+    const { motDePasseTemporaire } = await service.creerCompte(corps.nom, corps.email, "formateur");
+    return c.json({ email: corps.email, motDePasseTemporaire });
+  } catch (e) {
+    if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Creation d'un apprenant par le formateur. Reservee au role formateur.
+app.post("/formateur/apprenants", async (c) => {
+  const jeton = getCookie(c, "session");
+  const session = jeton
+    ? await construireSignataireSession(c.env).lire(jeton, Date.now())
+    : null;
+  if (!session || session.role !== "formateur") {
+    return c.json({ erreur: "reserve au formateur" }, 403);
+  }
+  const corps = await c.req.json<{ email: string; nom: string }>();
+  const service = construireServiceComptes(c.env);
+  try {
+    const { motDePasseTemporaire } = await service.creerCompte(corps.nom, corps.email, "apprenant");
+    return c.json({ nom: corps.nom, email: corps.email, motDePasseTemporaire });
+  } catch (e) {
+    if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
 // Page de test de l'inscription et de la connexion.
 app.get("/", (c) => c.html(PAGE_CONNEXION));
 

@@ -25,6 +25,7 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <legend>Compte de test</legend>
 <label>Adresse</label><input type="text" id="t-email" value="test@beek.local">
 <button id="btnTest">Creer un apprenant de test</button>
+<button id="btnTestF">Creer un formateur de test</button>
 </fieldset>
 
 <fieldset>
@@ -48,6 +49,13 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <legend>Session</legend>
 <button id="btnMoi">Qui suis-je</button>
 <button id="btnDeco">Se deconnecter</button>
+</fieldset>
+
+<fieldset>
+<legend>Formateur : creer un apprenant</legend>
+<label>Nom</label><input type="text" id="f-nom" value="Apprenant">
+<label>Adresse</label><input type="text" id="f-email" value="eleve@beek.local">
+<button id="btnFcreer">Creer l'apprenant</button>
 </fieldset>
 
 <script>
@@ -96,6 +104,21 @@ document.getElementById('btnMoi').onclick=async function(){
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});
   afficher('Deconnecte.');
+};
+
+document.getElementById('btnTestF').onclick=async function(){
+  afficher('Creation...');
+  var email=document.getElementById('t-email').value;
+  var r=await fetch('/dev/creer-formateur',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,nom:'Formateur'})});
+  var d=await r.json();
+  if(d.motDePasseTemporaire){document.getElementById('a-email').value=email;afficher('Formateur '+email+' cree. Mot de passe temporaire : '+d.motDePasseTemporaire);}else{afficher('Erreur : '+d.erreur);}
+};
+
+document.getElementById('btnFcreer').onclick=async function(){
+  afficher('Creation...');
+  var r=await fetch('/formateur/apprenants',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nom:document.getElementById('f-nom').value,email:document.getElementById('f-email').value})});
+  var d=await r.json();
+  if(d.motDePasseTemporaire){afficher('Apprenant cree. Coupon : '+d.email+' / '+d.motDePasseTemporaire);}else{afficher('Erreur : '+d.erreur);}
 };
 </script>
 </body>
