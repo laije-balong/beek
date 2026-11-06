@@ -1,6 +1,6 @@
 import type { BaseD1 } from "../comptes/depot-d1";
 import type { DepotContenu } from "./depot";
-import type { Domaine, Filiere, Niveau, NomNiveau, Notion } from "./types";
+import type { Domaine, Filiere, FilRouge, Niveau, NomNiveau, Notion } from "./types";
 
 // Depot de la taxonomie sur D1. Meme interface que le depot en memoire. La
 // reutilisation de BaseD1 evite une seconde definition de l'API D1.
@@ -120,6 +120,33 @@ export class DepotContenuD1 implements DepotContenu {
   async nombreExercicesDeNotion(_notionId: string): Promise<number> {
     // La table des exercices arrive en iteration 3. Sans elle, aucune notion
     // n'est encore utilisee, donc la garde US-05 CA4 compte zero.
+    return 0;
+  }
+
+  async creerFilRouge(filRouge: FilRouge): Promise<void> {
+    await this.#db
+      .prepare("INSERT INTO fil_rouge (id, nom, description) VALUES (?, ?, ?)")
+      .bind(filRouge.id, filRouge.nom, filRouge.description)
+      .run();
+  }
+  async filRougeParId(id: string): Promise<FilRouge | null> {
+    return this.#db.prepare("SELECT * FROM fil_rouge WHERE id = ?").bind(id).first<FilRouge>();
+  }
+  async filRougeParNom(nom: string): Promise<FilRouge | null> {
+    return this.#db.prepare("SELECT * FROM fil_rouge WHERE nom = ?").bind(nom).first<FilRouge>();
+  }
+  async filsRouges(): Promise<FilRouge[]> {
+    const { results } = await this.#db
+      .prepare("SELECT * FROM fil_rouge ORDER BY nom")
+      .all<FilRouge>();
+    return results;
+  }
+  async supprimerFilRouge(id: string): Promise<void> {
+    await this.#db.prepare("DELETE FROM fil_rouge WHERE id = ?").bind(id).run();
+  }
+  async nombreElementsDuFilRouge(_filRougeId: string): Promise<number> {
+    // Exercices, defis et programmes arrivent plus tard. Sans eux, aucun fil
+    // rouge n'est encore utilise, donc la garde US-06 CA3 compte zero.
     return 0;
   }
 }

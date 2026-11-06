@@ -330,6 +330,37 @@ app.delete("/formateur/notions/:id", async (c) => {
   }
 });
 
+// Fils rouges, reserves au formateur (US-06).
+app.post("/formateur/fils-rouges", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { nom, description } = await c.req.json<{ nom: string; description?: string }>();
+  try {
+    return c.json(await construireServiceContenu(c.env).creerFilRouge(nom, description ?? ""));
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/formateur/fils-rouges", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  return c.json(await construireServiceContenu(c.env).filsRouges());
+});
+
+app.delete("/formateur/fils-rouges/:id", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  try {
+    await construireServiceContenu(c.env).supprimerFilRouge(c.req.param("id"));
+    return c.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
 // Espace du formateur, protege par la session de role formateur. Sinon, retour
 // a la page de connexion.
 app.get("/formateur", async (c) => {

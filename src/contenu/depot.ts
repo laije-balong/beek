@@ -1,4 +1,4 @@
-import type { Domaine, Filiere, Niveau, Notion } from "./types";
+import type { Domaine, Filiere, FilRouge, Niveau, Notion } from "./types";
 
 // Interface du depot de la taxonomie. Le domaine ne connait que cette interface.
 // Une version en memoire sert aux tests, une version D1 sert en production.
@@ -24,4 +24,13 @@ export interface DepotContenu {
   // Nombre d'exercices rattaches a une notion, pour la garde de suppression,
   // US-05 CA4. Vaut zero tant que les exercices n'existent pas (iteration 3).
   nombreExercicesDeNotion(notionId: string): Promise<number>;
+
+  creerFilRouge(filRouge: FilRouge): Promise<void>;
+  filRougeParId(id: string): Promise<FilRouge | null>;
+  filRougeParNom(nom: string): Promise<FilRouge | null>;
+  filsRouges(): Promise<FilRouge[]>;
+  supprimerFilRouge(id: string): Promise<void>;
+  // Nombre d'elements qui utilisent un fil rouge, pour la garde de suppression,
+  // US-06 CA3. Vaut zero tant qu'aucun exercice, defi ou programme ne l'utilise.
+  nombreElementsDuFilRouge(filRougeId: string): Promise<number>;
 }

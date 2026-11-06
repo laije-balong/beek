@@ -63,6 +63,14 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Fils rouges (US-06)</legend>
+<label>Nom</label><input type="text" id="fr-nom">
+<label>Description</label><input type="text" id="fr-desc">
+<button id="btnFilRouge">Creer le fil rouge</button>
+<ul id="liste-fils-rouges"></ul>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -186,6 +194,30 @@ document.getElementById('btnNotion').onclick=async function(){
 };
 
 chargerDomaines();
+
+// Fils rouges (US-06).
+async function chargerFilsRouges(){
+  var liste=await (await fetch('/formateur/fils-rouges')).json();
+  var ul=document.getElementById('liste-fils-rouges');ul.innerHTML='';
+  liste.forEach(function(fr){
+    var li=document.createElement('li');li.textContent=fr.nom+(fr.description?(' : '+fr.description):'')+' ';
+    var b=document.createElement('button');b.textContent='Supprimer';
+    b.onclick=async function(){
+      var r=await fetch('/formateur/fils-rouges/'+fr.id,{method:'DELETE'});
+      if(r.status!==200){var e=await r.json();document.getElementById('message').textContent='Erreur : '+e.erreur;return;}
+      await chargerFilsRouges();
+    };
+    li.appendChild(b);ul.appendChild(li);
+  });
+}
+document.getElementById('btnFilRouge').onclick=async function(){
+  var r=await fetch('/formateur/fils-rouges',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nom:document.getElementById('fr-nom').value,description:document.getElementById('fr-desc').value})});
+  var d=await r.json();
+  if(r.status!==200){document.getElementById('message').textContent='Erreur : '+d.erreur;return;}
+  document.getElementById('fr-nom').value='';document.getElementById('fr-desc').value='';
+  await chargerFilsRouges();
+};
+chargerFilsRouges();
 
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});

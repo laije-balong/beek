@@ -34,6 +34,15 @@ export interface Notion {
   niveauId: string;
 }
 
+// Fil rouge : univers commun aux exercices, defis et programmes (US-06, annexe D).
+// Par exemple le Cyber Mwinda. Le lien entre un defi et son fil rouge est range a
+// part, pour qu'un defi puisse plus tard en avoir plusieurs (US-06 CA4).
+export interface FilRouge {
+  id: string;
+  nom: string;
+  description: string;
+}
+
 export class ErreurContenu extends Error {
   constructor(message: string) {
     super(message);

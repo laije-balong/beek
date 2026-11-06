@@ -1,5 +1,5 @@
 import type { DepotContenu } from "./depot";
-import type { Domaine, Filiere, Niveau, Notion } from "./types";
+import type { Domaine, Filiere, FilRouge, Niveau, Notion } from "./types";
 
 function parOrdre<T extends { ordre: number }>(liste: T[]): T[] {
   return liste.slice().sort((a, b) => a.ordre - b.ordre);
@@ -12,9 +12,11 @@ export class DepotContenuMemoire implements DepotContenu {
   readonly #filieres = new Map<string, Filiere>();
   readonly #niveaux = new Map<string, Niveau>();
   readonly #notions = new Map<string, Notion>();
-  // En attendant les exercices de l'iteration 3, un compteur que les tests
-  // peuvent fixer pour verifier la garde de suppression, US-05 CA4.
+  readonly #filsRouges = new Map<string, FilRouge>();
+  // En attendant les exercices de l'iteration 3, des compteurs que les tests
+  // peuvent fixer pour verifier les gardes de suppression, US-05 CA4 et US-06 CA3.
   readonly #exercicesParNotion = new Map<string, number>();
+  readonly #elementsParFilRouge = new Map<string, number>();
 
   async creerDomaine(domaine: Domaine): Promise<void> {
     this.#domaines.set(domaine.id, structuredClone(domaine));
@@ -83,8 +85,35 @@ export class DepotContenuMemoire implements DepotContenu {
     return this.#exercicesParNotion.get(notionId) ?? 0;
   }
 
+  async creerFilRouge(filRouge: FilRouge): Promise<void> {
+    this.#filsRouges.set(filRouge.id, structuredClone(filRouge));
+  }
+  async filRougeParId(id: string): Promise<FilRouge | null> {
+    const f = this.#filsRouges.get(id);
+    return f ? structuredClone(f) : null;
+  }
+  async filRougeParNom(nom: string): Promise<FilRouge | null> {
+    for (const f of this.#filsRouges.values()) if (f.nom === nom) return structuredClone(f);
+    return null;
+  }
+  async filsRouges(): Promise<FilRouge[]> {
+    return [...this.#filsRouges.values()]
+      .sort((a, b) => a.nom.localeCompare(b.nom))
+      .map((f) => structuredClone(f));
+  }
+  async supprimerFilRouge(id: string): Promise<void> {
+    this.#filsRouges.delete(id);
+  }
+  async nombreElementsDuFilRouge(filRougeId: string): Promise<number> {
+    return this.#elementsParFilRouge.get(filRougeId) ?? 0;
+  }
+
   // Aide de test : simule des exercices rattaches a une notion.
   simulerExercices(notionId: string, nombre: number): void {
     this.#exercicesParNotion.set(notionId, nombre);
+  }
+  // Aide de test : simule des elements rattaches a un fil rouge.
+  simulerElementsFilRouge(filRougeId: string, nombre: number): void {
+    this.#elementsParFilRouge.set(filRougeId, nombre);
   }
 }

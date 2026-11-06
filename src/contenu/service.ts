@@ -4,6 +4,7 @@ import {
   NOMS_NIVEAUX,
   type Domaine,
   type Filiere,
+  type FilRouge,
   type Niveau,
   type Notion,
 } from "./types";
@@ -92,6 +93,38 @@ export class ServiceContenu {
       throw new ErreurContenu(`Cette notion est utilisée par ${nombre} exercices.`);
     }
     await this.#depot.supprimerNotion(id);
+  }
+
+  // Cree un fil rouge, US-06. Le nom est unique dans Beek.
+  async creerFilRouge(nom: string, description: string): Promise<FilRouge> {
+    const propre = nom.trim();
+    if (!propre) throw new ErreurContenu("Donnez un nom au fil rouge.");
+    if (await this.#depot.filRougeParNom(propre)) {
+      throw new ErreurContenu("Un fil rouge porte deja ce nom.");
+    }
+    const filRouge: FilRouge = {
+      id: crypto.randomUUID(),
+      nom: propre,
+      description: description.trim(),
+    };
+    await this.#depot.creerFilRouge(filRouge);
+    return filRouge;
+  }
+
+  // Refuse la suppression d'un fil rouge utilise, avec le nombre d'elements qui
+  // l'utilisent (US-06 CA3).
+  async supprimerFilRouge(id: string): Promise<void> {
+    const filRouge = await this.#depot.filRougeParId(id);
+    if (!filRouge) throw new ErreurContenu("fil rouge introuvable");
+    const nombre = await this.#depot.nombreElementsDuFilRouge(id);
+    if (nombre > 0) {
+      throw new ErreurContenu(`Ce fil rouge est utilisé par ${nombre} elements.`);
+    }
+    await this.#depot.supprimerFilRouge(id);
+  }
+
+  filsRouges(): Promise<FilRouge[]> {
+    return this.#depot.filsRouges();
   }
 
   // Lectures pour l'ecran et les tests.
