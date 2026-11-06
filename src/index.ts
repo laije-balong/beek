@@ -126,13 +126,46 @@ app.get("/moi", async (c) => {
     await signataire.creer(session.id, session.role, maintenant),
     optionsCookie(c.req.url)
   );
-  return c.json({ nom: compte.nom, role: compte.role });
+  // Un formateur voit le nombre de codes de secours qui lui restent, EM-ACC-13.
+  const codesSecoursRestants =
+    compte.role === "formateur"
+      ? compte.codesDeSecours.filter((cs) => !cs.consomme).length
+      : undefined;
+  return c.json({ nom: compte.nom, role: compte.role, codesSecoursRestants });
 });
 
 // Deconnexion.
 app.post("/auth/deconnexion", (c) => {
   deleteCookie(c, "session", { path: "/" });
   return c.json({ ok: true });
+});
+
+// Recuperation du compte formateur par un code de secours, EM-ACC-13. Un code
+// valide ouvre le choix d'un nouveau mot de passe et pose une session.
+app.post("/auth/recuperation", async (c) => {
+  const corps = await c.req.json<{
+    email: string;
+    code: string;
+    resultatHex: string;
+  }>();
+  const service = construireServiceComptes(c.env);
+  try {
+    const compte = await service.utiliserCodeDeSecours(
+      corps.email,
+      corps.code,
+      fromHex(corps.resultatHex)
+    );
+    const jeton = await construireSignataireSession(c.env).creer(
+      compte.id,
+      compte.role,
+      Date.now()
+    );
+    setCookie(c, "session", jeton, optionsCookie(c.req.url));
+    return c.json({ ok: true, nom: compte.nom, role: compte.role });
+  } catch (e) {
+    if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
 });
 
 // Creation d'un apprenant de test. Reservee au developpement, gardee par une
@@ -156,8 +189,12 @@ app.post("/dev/creer-formateur", async (c) => {
   const corps = await c.req.json<{ email: string; nom: string }>();
   const service = construireServiceComptes(c.env);
   try {
-    const { motDePasseTemporaire } = await service.creerCompte(corps.nom, corps.email, "formateur");
-    return c.json({ email: corps.email, motDePasseTemporaire });
+    const { motDePasseTemporaire, codesDeSecours } = await service.creerCompte(
+      corps.nom,
+      corps.email,
+      "formateur"
+    );
+    return c.json({ email: corps.email, motDePasseTemporaire, codesDeSecours });
   } catch (e) {
     if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
     throw e;
@@ -190,6 +227,18 @@ app.post("/formateur/apprenants", async (c) => {
     if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
     throw e;
   }
+});
+
+// Regeneration des codes de secours par le formateur connecte, EM-ACC-13. Les
+// anciens deviennent caducs. Renvoie les nouveaux codes, affiches une seule fois.
+app.post("/formateur/codes-secours", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "formateur") {
+    return c.json({ erreur: "reserve au formateur" }, 403);
+  }
+  const service = construireServiceComptes(c.env);
+  const codesDeSecours = await service.regenererCodesDeSecours(session.id);
+  return c.json({ codesDeSecours });
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour

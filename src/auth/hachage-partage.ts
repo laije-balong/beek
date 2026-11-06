@@ -34,6 +34,19 @@ export function genererMotDePasseTemporaire(longueur = 12): string {
   return s;
 }
 
+// Code de secours du formateur, EM-ACC-13. 10 caracteres sur 32, environ 50 bits,
+// affiches groupes par cinq pour la lecture et l'impression.
+export function genererCodeDeSecours(): string {
+  const brut = genererMotDePasseTemporaire(10);
+  return brut.slice(0, 5) + "-" + brut.slice(5);
+}
+
+// Normalise un code saisi avant hachage : retire ce qui n'est pas alphanumerique
+// et met en majuscules, pour tolerer les tirets et la casse de la transcription.
+export function normaliserCode(code: string): string {
+  return code.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
 // Authentification par hachage partage, selon docs/exigences-techniques/authentification.md.
 // Le navigateur fait le hachage lent. Cette classe fait le hachage rapide du
 // serveur, un HMAC-SHA256 avec le poivre, puis compare a temps constant.

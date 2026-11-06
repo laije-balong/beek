@@ -1,7 +1,21 @@
 import type { Authentificateur } from "../auth/types";
-import { genererSel, genererMotDePasseTemporaire } from "../auth/hachage-partage";
+import {
+  genererSel,
+  genererMotDePasseTemporaire,
+  genererCodeDeSecours,
+  normaliserCode,
+} from "../auth/hachage-partage";
 import type { DepotComptes } from "./depot";
-import { type Compte, type Consentement, type Role, ErreurCompte } from "./types";
+import {
+  type Compte,
+  type CodeDeSecours,
+  type Consentement,
+  type Role,
+  ErreurCompte,
+} from "./types";
+
+// Nombre de codes de secours tires a la creation d'un compte formateur, EM-ACC-13.
+export const NOMBRE_CODES_SECOURS = 5;
 import {
   type Horloge,
   SEPT_JOURS,
@@ -33,7 +47,7 @@ export class ServiceComptes {
     nom: string,
     email: string,
     role: Role = "apprenant"
-  ): Promise<{ compte: Compte; motDePasseTemporaire: string }> {
+  ): Promise<{ compte: Compte; motDePasseTemporaire: string; codesDeSecours: string[] }> {
     const emailNorm = email.trim().toLowerCase();
     if (!estEmailValide(emailNorm)) {
       throw new ErreurCompte("adresse invalide");
@@ -44,6 +58,11 @@ export class ServiceComptes {
     const sel = genererSel();
     const temp = genererMotDePasseTemporaire();
     const verificateur = await this.#auth.preparerVerificateurSecret(temp, sel);
+    // Seul un formateur recoit des codes de secours, EM-ACC-13.
+    const { codes, clairs } =
+      role === "formateur"
+        ? await this.#genererCodesDeSecours()
+        : { codes: [] as CodeDeSecours[], clairs: [] as string[] };
     const maintenant = this.#horloge.maintenant();
     const compte: Compte = {
       id: crypto.randomUUID(),
@@ -62,9 +81,28 @@ export class ServiceComptes {
       statutAvantBlocage: null,
       motsDePasseTemporairesDuJour: 0,
       jourDesMotsDePasseTemporaires: jourBrazzaville(maintenant),
+      codesDeSecours: codes,
     };
     await this.#depot.creer(compte);
-    return { compte, motDePasseTemporaire: temp };
+    return { compte, motDePasseTemporaire: temp, codesDeSecours: clairs };
+  }
+
+  // Tire NOMBRE_CODES_SECOURS codes de secours. Renvoie les verificateurs a
+  // stocker et les codes en clair, a afficher une seule fois, EM-ACC-13.
+  async #genererCodesDeSecours(): Promise<{ codes: CodeDeSecours[]; clairs: string[] }> {
+    const codes: CodeDeSecours[] = [];
+    const clairs: string[] = [];
+    for (let i = 0; i < NOMBRE_CODES_SECOURS; i++) {
+      const clair = genererCodeDeSecours();
+      const sel = genererSel();
+      const verificateur = await this.#auth.preparerVerificateurSecret(
+        normaliserCode(clair),
+        sel
+      );
+      codes.push({ sel, verificateur, consomme: false });
+      clairs.push(clair);
+    }
+    return { codes, clairs };
   }
 
   // L'apprenant active son compte. Il saisit le mot de passe temporaire, choisit
@@ -231,5 +269,63 @@ export class ServiceComptes {
   // Compte par identifiant, pour resoudre une session.
   async compte(id: string): Promise<Compte | null> {
     return this.#depot.parId(id);
+  }
+
+  // EM-ACC-13. Le formateur recupere l'acces avec un code de secours : il saisit
+  // son adresse, un code et choisit un nouveau mot de passe. Un code valide est
+  // consomme et ne ressert pas. La recuperation n'applique pas le blocage RG-06,
+  // c'est l'issue de secours, et elle leve un blocage eventuel. Beek n'envoie
+  // aucun e-mail. Renvoie le compte, pour ouvrir une session.
+  async utiliserCodeDeSecours(
+    email: string,
+    code: string,
+    nouveauResultatNavigateur: Uint8Array
+  ): Promise<Compte> {
+    const compte = await this.#depot.parEmail(email.trim().toLowerCase());
+    if (!compte || compte.role !== "formateur") {
+      throw new ErreurCompte("code de secours refuse");
+    }
+    const normalise = normaliserCode(code);
+    let trouve = -1;
+    for (let i = 0; i < compte.codesDeSecours.length; i++) {
+      const cs = compte.codesDeSecours[i];
+      if (cs.consomme) continue;
+      if (await this.#auth.verifierSecret(normalise, cs.sel, cs.verificateur)) {
+        trouve = i;
+      }
+    }
+    if (trouve < 0) {
+      throw new ErreurCompte("code de secours refuse");
+    }
+    compte.codesDeSecours[trouve].consomme = true;
+    compte.verificateur = await this.#auth.preparerVerificateur(nouveauResultatNavigateur);
+    compte.statut = "actif";
+    compte.echecsConnexion = 0;
+    compte.finBlocage = null;
+    compte.statutAvantBlocage = null;
+    compte.expirationMotDePasseTemporaire = null;
+    await this.#depot.mettreAJour(compte);
+    return compte;
+  }
+
+  // EM-ACC-13. Le formateur connecte regenere l'ensemble de ses codes de secours.
+  // Les anciens deviennent caducs. Renvoie les nouveaux codes en clair, affiches
+  // une seule fois.
+  async regenererCodesDeSecours(id: string): Promise<string[]> {
+    const compte = await this.#depot.parId(id);
+    if (!compte || compte.role !== "formateur") {
+      throw new ErreurCompte("compte introuvable");
+    }
+    const { codes, clairs } = await this.#genererCodesDeSecours();
+    compte.codesDeSecours = codes;
+    await this.#depot.mettreAJour(compte);
+    return clairs;
+  }
+
+  // Nombre de codes de secours non consommes, pour signaler au formateur.
+  async codesDeSecoursRestants(id: string): Promise<number> {
+    const compte = await this.#depot.parId(id);
+    if (!compte) return 0;
+    return compte.codesDeSecours.filter((c) => !c.consomme).length;
   }
 }

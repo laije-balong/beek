@@ -42,6 +42,13 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <div id="zoneCoupon"></div>
 
 <fieldset class="noprint">
+<legend>Codes de secours (EM-ACC-13)</legend>
+<p id="restants"></p>
+<button id="btnCodes">Regenerer les 5 codes</button>
+<div id="zoneCodes"></div>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -55,6 +62,7 @@ async function qui(){
   if(r.status!==200){location.href='/';return;}
   var d=await r.json();
   document.getElementById('message').textContent='Connecte : '+d.nom+' ('+d.role+')';
+  if(typeof d.codesSecoursRestants==='number'){document.getElementById('restants').textContent='Codes de secours restants : '+d.codesSecoursRestants;}
 }
 qui();
 
@@ -78,6 +86,23 @@ document.getElementById('btnCreer').onclick=async function(){
   var bi=document.createElement('button');bi.className='noprint';bi.textContent='Imprimer';bi.onclick=function(){window.print();};box.appendChild(bi);
   zone.innerHTML='';zone.appendChild(box);
   document.getElementById('nom').value='';document.getElementById('email').value='';
+};
+
+document.getElementById('btnCodes').onclick=async function(){
+  if(!confirm('Regenerer les codes rend les anciens caducs. Continuer ?'))return;
+  var r=await fetch('/formateur/codes-secours',{method:'POST'});
+  var d=await r.json();
+  var z=document.getElementById('zoneCodes');z.innerHTML='';
+  if(!d.codesDeSecours){document.getElementById('message').textContent='Erreur : '+d.erreur;return;}
+  var box=document.createElement('div');box.className='coupon';
+  var h=document.createElement('h2');h.textContent='Codes de secours (a imprimer)';box.appendChild(h);
+  var ul=document.createElement('ul');
+  d.codesDeSecours.forEach(function(code){var li=document.createElement('li');li.textContent=code;ul.appendChild(li);});
+  box.appendChild(ul);
+  var av=document.createElement('p');av.className='avert';av.textContent='Imprimez ces codes maintenant. Ils ne seront plus affichables ensuite.';box.appendChild(av);
+  var bi=document.createElement('button');bi.className='noprint';bi.textContent='Imprimer';bi.onclick=function(){window.print();};box.appendChild(bi);
+  z.appendChild(box);
+  document.getElementById('restants').textContent='Codes de secours restants : '+d.codesDeSecours.length;
 };
 
 document.getElementById('btnDeco').onclick=async function(){

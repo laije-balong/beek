@@ -1,5 +1,11 @@
 import type { DepotComptes } from "./depot";
-import { type Compte, type Role, type StatutCompte, ErreurCompte } from "./types";
+import {
+  type Compte,
+  type CodeDeSecours,
+  type Role,
+  type StatutCompte,
+  ErreurCompte,
+} from "./types";
 
 // Sous-ensemble de l'API D1 que le depot utilise. Il evite une dependance de
 // types. Une vraie base D1 satisfait cette interface par sa forme.
@@ -27,6 +33,34 @@ function fromHex(h: string): Uint8Array {
   return out;
 }
 
+// Les codes de secours sont ranges en JSON, sel et verificateur en hexadecimal,
+// pour garder l'agregat compte entier sans table jointe, EM-ACC-13.
+interface CodeSecoursJson {
+  sel: string;
+  verificateur: string;
+  consomme: boolean;
+}
+
+function codesDepuisJson(json: string | null): CodeDeSecours[] {
+  if (!json) return [];
+  const brut = JSON.parse(json) as CodeSecoursJson[];
+  return brut.map((c) => ({
+    sel: fromHex(c.sel),
+    verificateur: fromHex(c.verificateur),
+    consomme: c.consomme,
+  }));
+}
+
+function codesVersJson(codes: CodeDeSecours[]): string {
+  return JSON.stringify(
+    codes.map((c) => ({
+      sel: toHex(c.sel),
+      verificateur: toHex(c.verificateur),
+      consomme: c.consomme,
+    }))
+  );
+}
+
 interface LigneCompte {
   id: string;
   nom: string;
@@ -44,6 +78,7 @@ interface LigneCompte {
   statut_avant_blocage: string | null;
   mots_de_passe_temporaires_du_jour: number;
   jour_des_mots_de_passe_temporaires: string | null;
+  codes_secours: string | null;
 }
 
 function versCompte(l: LigneCompte): Compte {
@@ -64,6 +99,7 @@ function versCompte(l: LigneCompte): Compte {
     statutAvantBlocage: l.statut_avant_blocage as StatutCompte | null,
     motsDePasseTemporairesDuJour: l.mots_de_passe_temporaires_du_jour,
     jourDesMotsDePasseTemporaires: l.jour_des_mots_de_passe_temporaires,
+    codesDeSecours: codesDepuisJson(l.codes_secours),
   };
 }
 
@@ -99,8 +135,9 @@ export class DepotComptesD1 implements DepotComptes {
             id, nom, email, role, statut, sel, verificateur,
             expiration_mot_de_passe_temporaire, date_creation, date_activation,
             date_consentement, echecs_connexion, fin_blocage, statut_avant_blocage,
-            mots_de_passe_temporaires_du_jour, jour_des_mots_de_passe_temporaires
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            mots_de_passe_temporaires_du_jour, jour_des_mots_de_passe_temporaires,
+            codes_secours
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
           compte.id,
@@ -118,7 +155,8 @@ export class DepotComptesD1 implements DepotComptes {
           compte.finBlocage,
           compte.statutAvantBlocage,
           compte.motsDePasseTemporairesDuJour,
-          compte.jourDesMotsDePasseTemporaires
+          compte.jourDesMotsDePasseTemporaires,
+          codesVersJson(compte.codesDeSecours)
         )
         .run();
     } catch (e) {
@@ -136,7 +174,8 @@ export class DepotComptesD1 implements DepotComptes {
           nom = ?, email = ?, role = ?, statut = ?, sel = ?, verificateur = ?,
           expiration_mot_de_passe_temporaire = ?, date_activation = ?, date_consentement = ?,
           echecs_connexion = ?, fin_blocage = ?, statut_avant_blocage = ?,
-          mots_de_passe_temporaires_du_jour = ?, jour_des_mots_de_passe_temporaires = ?
+          mots_de_passe_temporaires_du_jour = ?, jour_des_mots_de_passe_temporaires = ?,
+          codes_secours = ?
         WHERE id = ?`
       )
       .bind(
@@ -154,6 +193,7 @@ export class DepotComptesD1 implements DepotComptes {
         compte.statutAvantBlocage,
         compte.motsDePasseTemporairesDuJour,
         compte.jourDesMotsDePasseTemporaires,
+        codesVersJson(compte.codesDeSecours),
         compte.id
       )
       .run();

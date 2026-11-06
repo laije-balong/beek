@@ -63,6 +63,14 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <button id="btnFcreer">Creer l'apprenant</button>
 </fieldset>
 
+<fieldset>
+<legend>Recuperation par code de secours (formateur)</legend>
+<label>Adresse</label><input type="text" id="r-email">
+<label>Code de secours</label><input type="text" id="r-code">
+<label>Nouveau mot de passe</label><input type="password" id="r-mdp">
+<button id="btnRecup">Recuperer l'acces</button>
+</fieldset>
+
 <script>
 function hex(a){var s='';for(var i=0;i<a.length;i++)s+=a[i].toString(16).padStart(2,'0');return s;}
 function fromHex(h){var o=new Uint8Array(h.length/2);for(var i=0;i<o.length;i++)o[i]=parseInt(h.slice(i*2,i*2+2),16);return o;}
@@ -123,7 +131,26 @@ document.getElementById('btnTestF').onclick=async function(){
   var email=document.getElementById('t-email').value;
   var r=await fetch('/dev/creer-formateur',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,nom:'Formateur'})});
   var d=await r.json();
-  if(d.motDePasseTemporaire){document.getElementById('a-email').value=email;afficher('Formateur '+email+' cree. Mot de passe temporaire : '+d.motDePasseTemporaire);}else{afficher('Erreur : '+d.erreur);}
+  if(d.motDePasseTemporaire){
+    document.getElementById('a-email').value=email;
+    document.getElementById('r-email').value=email;
+    afficher('Formateur '+email+' cree. Mot de passe temporaire : '+d.motDePasseTemporaire+' | Codes de secours : '+(d.codesDeSecours||[]).join('  '));
+  }else{afficher('Erreur : '+d.erreur);}
+};
+
+document.getElementById('btnRecup').onclick=async function(){
+  try{
+    afficher('Recuperation...');
+    var email=document.getElementById('r-email').value;
+    var mdpClair=document.getElementById('r-mdp').value;
+    var refus=refusMdp(mdpClair);
+    if(refus){afficher('Erreur : '+refus);return;}
+    var sel=await selPour(email);
+    var resultatHex=await pbkdf2(mdpClair,sel);
+    var r=await fetch('/auth/recuperation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,code:document.getElementById('r-code').value,resultatHex:resultatHex})});
+    var d=await r.json();
+    afficher(d.ok?('Acces recupere, bonjour '+d.nom+'. Le nouveau mot de passe est actif.'):('Erreur : '+d.erreur));
+  }catch(e){afficher('Erreur : '+e);}
 };
 
 document.getElementById('btnFcreer').onclick=async function(){

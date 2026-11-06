@@ -13,6 +13,14 @@ export interface Consentement {
   traitementDonnees: boolean;
 }
 
+// Un code de secours du formateur, EM-ACC-13. Le code en clair n'est jamais
+// stocke : seul son HMAC avec un sel propre l'est, avec son etat consomme.
+export interface CodeDeSecours {
+  sel: Uint8Array;
+  verificateur: Uint8Array;
+  consomme: boolean;
+}
+
 // Un compte, tel que le domaine le manipule. Les dates sont en millisecondes
 // depuis l'epoque. Le sel et le verificateur sont des octets.
 export interface Compte {
@@ -32,6 +40,8 @@ export interface Compte {
   statutAvantBlocage: StatutCompte | null;
   motsDePasseTemporairesDuJour: number;
   jourDesMotsDePasseTemporaires: string | null;
+  // Codes de secours, non vides pour un formateur, EM-ACC-13.
+  codesDeSecours: CodeDeSecours[];
 }
 
 export class ErreurCompte extends Error {
