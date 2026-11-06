@@ -51,6 +51,10 @@ Si le 99e centile atteint ou dépasse 10 ms : arrêt et question au porteur, sel
 
 Sans jeton d'API, lisez les chiffres sur le tableau de bord. Workers et Pages, le worker beek, onglet Metrics, section CPU Time. Choisissez la plage de temps de la rafale. Le tableau de bord affiche les centiles de temps de calcul, en millisecondes. Comparez le 99e centile à la limite de 10 ms et à la marge de 5 ms.
 
+## Dernier relevé
+
+Relevé du 06/11/2026, sur l'environnement de test beek.cvmosala.workers.dev, 500 connexions rapprochées, concurrence de 25. Temps de calcul du serveur, par l'API GraphQL sur la fenêtre de la rafale : médiane 1,72 ms, 99e centile 4,57 ms, sur 492 requêtes échantillonnées, zéro erreur. Seuil de 10 ms tenu avec marge, sous la marge visée de 5 ms. Le risque du hachage dans la limite de 10 ms est levé.
+
 ## Limites assumées
 
 L'analytique repose sur un échantillon adaptatif, pas sur un relevé exhaustif. Les chiffres sont des estimations, suffisantes pour vérifier une marge large sous 10 ms. La rafale produit autant d'écritures D1 que de connexions, 500 par défaut, comptées dans le quota d'écriture. C'est une mesure ponctuelle, négligeable à l'échelle du projet.

@@ -11,11 +11,11 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "beek"
-database_id = "A_REMPLIR"
+database_id = "4059e1fd-cee8-4742-8804-ff3b6168df53"
 migrations_dir = "migrations"
 
 # Images des exercices, 200 Ko au plus.
 # L'identifiant est pose par le porteur apres "wrangler kv namespace create IMAGES".
 [[kv_namespaces]]
 binding = "IMAGES"
-id = "A_REMPLIR"
+id = "aa27c1b03d9c4dcb84276c3ef4a7cdfd"
