@@ -49,6 +49,20 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Taxonomie du contenu (US-05)</legend>
+<label>Nouveau domaine</label>
+<input type="text" id="d-nom"><button id="btnDomaine">Creer le domaine</button>
+<label>Domaine</label><select id="sel-domaine"></select>
+<label>Nouvelle filiere dans ce domaine</label>
+<input type="text" id="f-nom2"><button id="btnFiliere">Creer la filiere</button>
+<label>Filiere</label><select id="sel-filiere"></select>
+<label>Niveau</label><select id="sel-niveau"></select>
+<label>Nouvelle notion a ce niveau</label>
+<input type="text" id="n-nom"><button id="btnNotion">Creer la notion</button>
+<ul id="liste-notions"></ul>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -104,6 +118,74 @@ document.getElementById('btnCodes').onclick=async function(){
   z.appendChild(box);
   document.getElementById('restants').textContent='Codes de secours restants : '+d.codesDeSecours.length;
 };
+
+// Taxonomie du contenu (US-05).
+function option(valeur,texte){var o=document.createElement('option');o.value=valeur;o.textContent=texte;return o;}
+function remplir(sel,elements,garderValeur){var avant=sel.value;sel.innerHTML='';elements.forEach(function(e){sel.appendChild(option(e.id,e.nom));});if(garderValeur&&elements.some(function(e){return e.id===avant;}))sel.value=avant;}
+
+async function chargerDomaines(selId){
+  var d=await (await fetch('/formateur/domaines')).json();
+  remplir(document.getElementById('sel-domaine'),d,false);
+  if(selId)document.getElementById('sel-domaine').value=selId;
+  await chargerFilieres();
+}
+async function chargerFilieres(selId){
+  var dom=document.getElementById('sel-domaine').value;
+  var f=dom?await (await fetch('/formateur/filieres?domaineId='+encodeURIComponent(dom))).json():[];
+  remplir(document.getElementById('sel-filiere'),f,false);
+  if(selId)document.getElementById('sel-filiere').value=selId;
+  await chargerNiveaux();
+}
+async function chargerNiveaux(){
+  var fil=document.getElementById('sel-filiere').value;
+  var n=fil?await (await fetch('/formateur/niveaux?filiereId='+encodeURIComponent(fil))).json():[];
+  remplir(document.getElementById('sel-niveau'),n,false);
+  await chargerNotions();
+}
+async function chargerNotions(){
+  var niv=document.getElementById('sel-niveau').value;
+  var ul=document.getElementById('liste-notions');ul.innerHTML='';
+  if(!niv)return;
+  var liste=await (await fetch('/formateur/notions?niveauId='+encodeURIComponent(niv))).json();
+  liste.forEach(function(no){
+    var li=document.createElement('li');li.textContent=no.nom+' ';
+    var b=document.createElement('button');b.textContent='Supprimer';
+    b.onclick=async function(){
+      var r=await fetch('/formateur/notions/'+no.id,{method:'DELETE'});
+      if(r.status!==200){var e=await r.json();document.getElementById('message').textContent='Erreur : '+e.erreur;return;}
+      await chargerNotions();
+    };
+    li.appendChild(b);ul.appendChild(li);
+  });
+}
+
+document.getElementById('sel-domaine').onchange=function(){chargerFilieres();};
+document.getElementById('sel-filiere').onchange=function(){chargerNiveaux();};
+document.getElementById('sel-niveau').onchange=function(){chargerNotions();};
+
+document.getElementById('btnDomaine').onclick=async function(){
+  var r=await fetch('/formateur/domaines',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({nom:document.getElementById('d-nom').value})});
+  var d=await r.json();
+  if(r.status!==200){document.getElementById('message').textContent='Erreur : '+d.erreur;return;}
+  document.getElementById('d-nom').value='';
+  await chargerDomaines(d.id);
+};
+document.getElementById('btnFiliere').onclick=async function(){
+  var r=await fetch('/formateur/filieres',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({domaineId:document.getElementById('sel-domaine').value,nom:document.getElementById('f-nom2').value})});
+  var d=await r.json();
+  if(r.status!==200){document.getElementById('message').textContent='Erreur : '+d.erreur;return;}
+  document.getElementById('f-nom2').value='';
+  await chargerFilieres(d.filiere.id);
+};
+document.getElementById('btnNotion').onclick=async function(){
+  var r=await fetch('/formateur/notions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({niveauId:document.getElementById('sel-niveau').value,nom:document.getElementById('n-nom').value})});
+  var d=await r.json();
+  if(r.status!==200){document.getElementById('message').textContent='Erreur : '+d.erreur;return;}
+  document.getElementById('n-nom').value='';
+  await chargerNotions();
+};
+
+chargerDomaines();
 
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});

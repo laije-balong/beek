@@ -3,6 +3,8 @@ import { SignataireSession } from "./auth/session";
 import { DepotComptesD1, type BaseD1 } from "./comptes/depot-d1";
 import { ServiceComptes } from "./comptes/service";
 import { horlogeSysteme } from "./comptes/temps";
+import { DepotContenuD1 } from "./contenu/depot-d1";
+import { ServiceContenu } from "./contenu/service";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -24,6 +26,11 @@ export function construireServiceComptes(env: Env): ServiceComptes {
     new AuthHachagePartage(env.POIVRE),
     horlogeSysteme
   );
+}
+
+// Assemble le service de la taxonomie du contenu.
+export function construireServiceContenu(env: Env): ServiceContenu {
+  return new ServiceContenu(new DepotContenuD1(env.DB));
 }
 
 // Assemble le signataire de session.

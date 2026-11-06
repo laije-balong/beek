@@ -2,10 +2,12 @@ import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import {
   construireServiceComptes,
+  construireServiceContenu,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
+import { ErreurContenu } from "./contenu/types";
 import { DUREE_SESSION } from "./auth/session";
 import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
@@ -41,6 +43,16 @@ async function sessionActuelle(c: Context<{ Bindings: Bindings }>) {
   const jeton = getCookie(c, "session");
   if (!jeton) return null;
   return construireSignataireSession(c.env).lire(jeton, Date.now());
+}
+
+// Exige une session de formateur. Renvoie la session, ou une reponse 403 a
+// retourner telle quelle.
+async function formateurOuRefus(c: Context<{ Bindings: Bindings }>) {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "formateur") {
+    return c.json({ erreur: "reserve au formateur" }, 403);
+  }
+  return session;
 }
 
 // Route de sante.
@@ -239,6 +251,83 @@ app.post("/formateur/codes-secours", async (c) => {
   const service = construireServiceComptes(c.env);
   const codesDeSecours = await service.regenererCodesDeSecours(session.id);
   return c.json({ codesDeSecours });
+});
+
+// Taxonomie du contenu, reservee au formateur (US-05). Domaines, puis filieres
+// avec leurs trois niveaux d'office, puis notions a un niveau.
+app.post("/formateur/domaines", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { nom } = await c.req.json<{ nom: string }>();
+  try {
+    return c.json(await construireServiceContenu(c.env).creerDomaine(nom));
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/formateur/domaines", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  return c.json(await construireServiceContenu(c.env).domaines());
+});
+
+app.post("/formateur/filieres", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { domaineId, nom } = await c.req.json<{ domaineId: string; nom: string }>();
+  try {
+    return c.json(await construireServiceContenu(c.env).creerFiliere(domaineId, nom));
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/formateur/filieres", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const domaineId = c.req.query("domaineId") ?? "";
+  return c.json(await construireServiceContenu(c.env).filieresDuDomaine(domaineId));
+});
+
+app.get("/formateur/niveaux", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const filiereId = c.req.query("filiereId") ?? "";
+  return c.json(await construireServiceContenu(c.env).niveauxDeFiliere(filiereId));
+});
+
+app.post("/formateur/notions", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { niveauId, nom } = await c.req.json<{ niveauId: string; nom: string }>();
+  try {
+    return c.json(await construireServiceContenu(c.env).creerNotion(niveauId, nom));
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/formateur/notions", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const niveauId = c.req.query("niveauId") ?? "";
+  return c.json(await construireServiceContenu(c.env).notionsDuNiveau(niveauId));
+});
+
+app.delete("/formateur/notions/:id", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  try {
+    await construireServiceContenu(c.env).supprimerNotion(c.req.param("id"));
+    return c.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour
