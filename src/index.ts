@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import {
   construireServiceComptes,
@@ -9,6 +9,7 @@ import { ErreurCompte } from "./comptes/types";
 import { DUREE_SESSION } from "./auth/session";
 import { toHex, fromHex } from "./util/hex";
 import { PAGE_CONNEXION } from "./page-connexion";
+import { PAGE_FORMATEUR } from "./page-formateur";
 
 type Bindings = Env & { AUTORISER_SEED?: string };
 
@@ -24,6 +25,13 @@ function optionsCookie(url: string) {
     secure: new URL(url).protocol === "https:",
     maxAge: Math.floor(DUREE_SESSION / 1000),
   };
+}
+
+// Lit la session du cookie, ou null si absente, invalide ou expiree.
+async function sessionActuelle(c: Context<{ Bindings: Bindings }>) {
+  const jeton = getCookie(c, "session");
+  if (!jeton) return null;
+  return construireSignataireSession(c.env).lire(jeton, Date.now());
 }
 
 // Route de sante.
@@ -157,23 +165,41 @@ app.post("/dev/creer-formateur", async (c) => {
 });
 
 // Creation d'un apprenant par le formateur. Reservee au role formateur.
+// Renvoie les donnees du coupon E-20, affiche une seule fois.
 app.post("/formateur/apprenants", async (c) => {
-  const jeton = getCookie(c, "session");
-  const session = jeton
-    ? await construireSignataireSession(c.env).lire(jeton, Date.now())
-    : null;
+  const session = await sessionActuelle(c);
   if (!session || session.role !== "formateur") {
     return c.json({ erreur: "reserve au formateur" }, 403);
   }
   const corps = await c.req.json<{ email: string; nom: string }>();
   const service = construireServiceComptes(c.env);
   try {
-    const { motDePasseTemporaire } = await service.creerCompte(corps.nom, corps.email, "apprenant");
-    return c.json({ nom: corps.nom, email: corps.email, motDePasseTemporaire });
+    const { compte, motDePasseTemporaire } = await service.creerCompte(
+      corps.nom,
+      corps.email,
+      "apprenant"
+    );
+    return c.json({
+      nom: compte.nom,
+      email: compte.email,
+      motDePasseTemporaire,
+      expirationMs: compte.expirationMotDePasseTemporaire,
+      site: new URL(c.req.url).origin,
+    });
   } catch (e) {
     if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
     throw e;
   }
+});
+
+// Espace du formateur, protege par la session de role formateur. Sinon, retour
+// a la page de connexion.
+app.get("/formateur", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "formateur") {
+    return c.redirect("/");
+  }
+  return c.html(PAGE_FORMATEUR);
 });
 
 // Page de test de l'inscription et de la connexion.
