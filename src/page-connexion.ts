@@ -27,10 +27,12 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <p id="resultat">Pret.</p>
 
 <fieldset>
-<legend>Compte de test</legend>
-<label>Adresse</label><input type="text" id="t-email" value="test@beek.local">
-<button id="btnTest">Creer un apprenant de test</button>
-<button id="btnTestF">Creer un formateur de test</button>
+<legend>Amorcage du premier formateur</legend>
+<label>Nom</label><input type="text" id="t-nom" value="Formateur">
+<label>Adresse</label><input type="text" id="t-email" value="prof@beek.local">
+<label>Secret d'amorcage</label><input type="text" id="t-secret">
+<button id="btnAmorcer">Amorcer le formateur</button>
+<p>Les apprenants se creent depuis l'espace formateur, <a href="/formateur">/formateur</a>, apres connexion.</p>
 </fieldset>
 
 <fieldset>
@@ -82,12 +84,16 @@ var MDP_MIN=${LONGUEUR_MIN};
 var MDP_COURANTS=${JSON.stringify(MOTS_DE_PASSE_COURANTS)};
 function refusMdp(m){if(m.length<MDP_MIN)return 'Le mot de passe compte au moins 8 caracteres.';if(MDP_COURANTS.indexOf(m.toLowerCase())>=0)return 'Ce mot de passe est trop courant. Choisissez-en un autre.';return null;}
 
-document.getElementById('btnTest').onclick=async function(){
-  afficher('Creation...');
+document.getElementById('btnAmorcer').onclick=async function(){
+  afficher('Amorcage...');
   var email=document.getElementById('t-email').value;
-  var r=await fetch('/dev/creer-apprenant',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,nom:'Test'})});
+  var r=await fetch('/amorcage',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({secret:document.getElementById('t-secret').value,email:email,nom:document.getElementById('t-nom').value})});
   var d=await r.json();
-  if(d.motDePasseTemporaire){document.getElementById('a-email').value=email;afficher('Compte '+email+' cree. Mot de passe temporaire : '+d.motDePasseTemporaire);}else{afficher('Erreur : '+d.erreur);}
+  if(d.motDePasseTemporaire){
+    document.getElementById('a-email').value=email;
+    document.getElementById('r-email').value=email;
+    afficher('Formateur '+email+' amorce. Mot de passe temporaire : '+d.motDePasseTemporaire+' | Codes de secours : '+(d.codesDeSecours||[]).join('  '));
+  }else{afficher('Erreur : '+d.erreur);}
 };
 
 document.getElementById('btnActiver').onclick=async function(){
@@ -124,18 +130,6 @@ document.getElementById('btnMoi').onclick=async function(){
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});
   afficher('Deconnecte.');
-};
-
-document.getElementById('btnTestF').onclick=async function(){
-  afficher('Creation...');
-  var email=document.getElementById('t-email').value;
-  var r=await fetch('/dev/creer-formateur',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:email,nom:'Formateur'})});
-  var d=await r.json();
-  if(d.motDePasseTemporaire){
-    document.getElementById('a-email').value=email;
-    document.getElementById('r-email').value=email;
-    afficher('Formateur '+email+' cree. Mot de passe temporaire : '+d.motDePasseTemporaire+' | Codes de secours : '+(d.codesDeSecours||[]).join('  '));
-  }else{afficher('Erreur : '+d.erreur);}
 };
 
 document.getElementById('btnRecup').onclick=async function(){

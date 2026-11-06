@@ -105,6 +105,18 @@ export class ServiceComptes {
     return { codes, clairs };
   }
 
+  // Amorcage du premier formateur, a la mise en service de Beek. Refuse si un
+  // formateur existe deja, pour que l'amorcage ne serve qu'une fois.
+  async amorcerFormateur(
+    nom: string,
+    email: string
+  ): Promise<{ compte: Compte; motDePasseTemporaire: string; codesDeSecours: string[] }> {
+    if (await this.#depot.existeFormateur()) {
+      throw new ErreurCompte("un formateur existe deja");
+    }
+    return this.creerCompte(nom, email, "formateur");
+  }
+
   // L'apprenant active son compte. Il saisit le mot de passe temporaire, choisit
   // son mot de passe, et donne son consentement. Le sel du compte est reutilise
   // pour le mot de passe choisi, le navigateur l'a utilise pour son calcul.

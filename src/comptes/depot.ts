@@ -7,4 +7,6 @@ export interface DepotComptes {
   parId(id: string): Promise<Compte | null>;
   creer(compte: Compte): Promise<void>;
   mettreAJour(compte: Compte): Promise<void>;
+  // Vrai si au moins un compte formateur existe, pour l'amorcage du premier.
+  existeFormateur(): Promise<boolean>;
 }

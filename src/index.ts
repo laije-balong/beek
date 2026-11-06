@@ -7,11 +7,20 @@ import {
 } from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
 import { DUREE_SESSION } from "./auth/session";
+import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
 import { PAGE_CONNEXION } from "./page-connexion";
 import { PAGE_FORMATEUR } from "./page-formateur";
 
-type Bindings = Env & { AUTORISER_SEED?: string };
+// SECRET_AMORCAGE n'existe qu'au moment d'amorcer le premier formateur. Le
+// porteur le pose, amorce une fois, puis le retire.
+type Bindings = Env & { SECRET_AMORCAGE?: string };
+
+// Compare deux secrets a temps constant, sur leurs octets.
+function secretEgal(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  return comparaisonConstante(enc.encode(a), enc.encode(b));
+}
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -168,31 +177,22 @@ app.post("/auth/recuperation", async (c) => {
   }
 });
 
-// Creation d'un apprenant de test. Reservee au developpement, gardee par une
-// variable d'environnement. En production, cette variable n'existe pas.
-app.post("/dev/creer-apprenant", async (c) => {
-  if (c.env.AUTORISER_SEED !== "1") return c.json({ erreur: "indisponible" }, 404);
-  const corps = await c.req.json<{ email: string; nom: string }>();
-  const service = construireServiceComptes(c.env);
-  try {
-    const { motDePasseTemporaire } = await service.creerCompte(corps.nom, corps.email);
-    return c.json({ email: corps.email, motDePasseTemporaire });
-  } catch (e) {
-    if (e instanceof ErreurCompte) return c.json({ erreur: e.message }, 400);
-    throw e;
+// Amorcage du premier formateur, a la mise en service. Garde par le secret
+// d'amorcage : la route n'existe que si SECRET_AMORCAGE est pose, et le secret
+// fourni doit correspondre. Refuse si un formateur existe deja. Renvoie le
+// coupon et les codes de secours, affiches une seule fois.
+app.post("/amorcage", async (c) => {
+  const attendu = c.env.SECRET_AMORCAGE;
+  if (!attendu) return c.json({ erreur: "indisponible" }, 404);
+  const corps = await c.req.json<{ secret: string; email: string; nom: string }>();
+  if (!secretEgal(corps.secret ?? "", attendu)) {
+    return c.json({ erreur: "secret refuse" }, 403);
   }
-});
-
-// Bootstrap d'un formateur de test. Reserve au developpement.
-app.post("/dev/creer-formateur", async (c) => {
-  if (c.env.AUTORISER_SEED !== "1") return c.json({ erreur: "indisponible" }, 404);
-  const corps = await c.req.json<{ email: string; nom: string }>();
   const service = construireServiceComptes(c.env);
   try {
-    const { motDePasseTemporaire, codesDeSecours } = await service.creerCompte(
+    const { motDePasseTemporaire, codesDeSecours } = await service.amorcerFormateur(
       corps.nom,
-      corps.email,
-      "formateur"
+      corps.email
     );
     return c.json({ email: corps.email, motDePasseTemporaire, codesDeSecours });
   } catch (e) {

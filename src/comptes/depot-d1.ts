@@ -127,6 +127,13 @@ export class DepotComptesD1 implements DepotComptes {
     return l ? versCompte(l) : null;
   }
 
+  async existeFormateur(): Promise<boolean> {
+    const l = await this.#db
+      .prepare("SELECT 1 AS u FROM compte WHERE role = 'formateur' LIMIT 1")
+      .first<{ u: number }>();
+    return l !== null;
+  }
+
   async creer(compte: Compte): Promise<void> {
     try {
       await this.#db

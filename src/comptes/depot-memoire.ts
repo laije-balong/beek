@@ -33,4 +33,11 @@ export class DepotComptesMemoire implements DepotComptes {
     }
     this.#parId.set(compte.id, structuredClone(compte));
   }
+
+  async existeFormateur(): Promise<boolean> {
+    for (const c of this.#parId.values()) {
+      if (c.role === "formateur") return true;
+    }
+    return false;
+  }
 }
