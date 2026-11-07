@@ -37,6 +37,11 @@ export function construireServiceContenu(env: Env): ServiceContenu {
   return new ServiceContenu(new DepotContenuD1(env.DB));
 }
 
+// Depot de la taxonomie, pour les lectures hors du service.
+export function construireDepotContenu(env: Env): DepotContenu {
+  return new DepotContenuD1(env.DB);
+}
+
 // Assemble le depot des exercices.
 export function construireDepotExercices(env: Env): DepotExercices {
   return new DepotExercicesD1(env.DB);

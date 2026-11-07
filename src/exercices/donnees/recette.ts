@@ -12,6 +12,42 @@
 
 import type { Exercice } from "../types";
 
+// Taxonomie a mettre en place pour accueillir les exercices de la recette. Une
+// filiere par matiere, au niveau Decouverte, une notion par seance (demande 3.6).
+// Le slug relie chaque notion et chaque fil rouge aux references des exercices
+// ci-dessous, resolues en identifiants reels au chargement.
+export const TAXONOMIE_RECETTE = {
+  domaine: "Formation programmation",
+  filieres: [
+    {
+      nom: "Histoire de l'informatique et de la programmation",
+      notions: [
+        { slug: "hist-s1", niveau: "Découverte", nom: "Compter et calculer avant l'ordinateur" },
+      ],
+    },
+    {
+      nom: "Fonctionnement de l'ordinateur",
+      notions: [{ slug: "mach-s8", niveau: "Découverte", nom: "Binaire et langages" }],
+    },
+    {
+      nom: "Logique et résolution de problèmes",
+      notions: [
+        { slug: "logi-s3", niveau: "Découverte", nom: "Un ordinateur exécute des instructions" },
+        { slug: "logi-s6", niveau: "Découverte", nom: "Découper un problème" },
+        { slug: "logi-s9", niveau: "Découverte", nom: "Vrai, faux et comparaisons" },
+      ],
+    },
+  ],
+  filsRouges: [
+    {
+      slug: "cyber-mwinda",
+      nom: "Cyber Mwinda",
+      description:
+        "Cybercafé fictif de Brazzaville. Impression 50 FCFA la page, internet 500 FCFA l'heure.",
+    },
+  ],
+};
+
 export const EXERCICES_RECETTE: Exercice[] = [
   // Seance 1, exercice 4. Vrai ou faux a cinq phrases, rendu en T05 avec une
   // liste "Vrai / Faux" par phrase.

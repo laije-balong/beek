@@ -88,6 +88,12 @@ export class DepotExercicesD1 implements DepotExercices {
       .first<LigneExercice>();
     return l ? versExercice(l) : null;
   }
+  async tous(): Promise<Exercice[]> {
+    const { results } = await this.#db
+      .prepare("SELECT * FROM exercice ORDER BY identifiant")
+      .all<LigneExercice>();
+    return results.map(versExercice);
+  }
   async existeIdentifiant(identifiant: string): Promise<boolean> {
     const l = await this.#db
       .prepare("SELECT 1 AS u FROM exercice WHERE identifiant = ? LIMIT 1")

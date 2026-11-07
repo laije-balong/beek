@@ -16,6 +16,11 @@ export class DepotExercicesMemoire implements DepotExercices {
     const e = this.#parIdentifiant.get(identifiant);
     return e ? structuredClone(e) : null;
   }
+  async tous(): Promise<Exercice[]> {
+    return [...this.#parIdentifiant.values()]
+      .sort((a, b) => a.identifiant.localeCompare(b.identifiant))
+      .map((e) => structuredClone(e));
+  }
   async existeIdentifiant(identifiant: string): Promise<boolean> {
     return this.#parIdentifiant.has(identifiant);
   }

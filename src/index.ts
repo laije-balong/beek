@@ -3,11 +3,17 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import {
   construireServiceComptes,
   construireServiceContenu,
+  construireDepotContenu,
+  construireDepotExercices,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
 import { ErreurContenu } from "./contenu/types";
+import { projeter } from "./exercices/projection";
+import { corriger, type Soumission } from "./exercices/correction";
+import { chargerRecette } from "./exercices/seed-recette";
+import { PAGE_EXERCICE } from "./page-exercice";
 import { DUREE_SESSION } from "./auth/session";
 import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
@@ -359,6 +365,69 @@ app.delete("/formateur/fils-rouges/:id", async (c) => {
     if (e instanceof ErreurContenu) return c.json({ erreur: e.message }, 400);
     throw e;
   }
+});
+
+// Charge les exercices de la recette : taxonomie, fil rouge et cinq exercices.
+// Reserve au formateur, idempotent.
+app.post("/formateur/charger-recette", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const resultat = await chargerRecette({
+    service: construireServiceContenu(c.env),
+    depotContenu: construireDepotContenu(c.env),
+    depotExercices: construireDepotExercices(c.env),
+  });
+  return c.json(resultat);
+});
+
+// Catalogue des exercices, reserve au formateur.
+app.get("/formateur/exercices", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const tous = await construireDepotExercices(c.env).tous();
+  return c.json(
+    tous.map((e) => ({ identifiant: e.identifiant, titre: e.titre, type: e.contenu.type }))
+  );
+});
+
+// Projection publique d'un exercice, sans la reponse attendue ni l'explication.
+app.get("/exercices/:id/public", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const exercice = await construireDepotExercices(c.env).parIdentifiant(c.req.param("id"));
+  if (!exercice) return c.json({ erreur: "exercice introuvable" }, 404);
+  return c.json(projeter(exercice));
+});
+
+// Correction d'une reponse. Le serveur refuse tout envoi qui ne passe pas par la
+// page : la session est exigee (critere 18).
+app.post("/exercices/:id/reponse", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const exercice = await construireDepotExercices(c.env).parIdentifiant(c.req.param("id"));
+  if (!exercice) return c.json({ erreur: "exercice introuvable" }, 404);
+  const soumission = await c.req.json<Soumission>();
+  try {
+    return c.json(corriger(exercice, soumission));
+  } catch {
+    return c.json({ erreur: "reponse mal formee" }, 400);
+  }
+});
+
+// Explication detaillee, affichee apres trois reponses fausses (section 4.3).
+app.get("/exercices/:id/explication", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const exercice = await construireDepotExercices(c.env).parIdentifiant(c.req.param("id"));
+  if (!exercice) return c.json({ erreur: "exercice introuvable" }, 404);
+  return c.json({ explication: exercice.explicationDetaillee });
+});
+
+// Ecran "tester un exercice" (EM-CON-06), reserve au formateur.
+app.get("/test-exercice", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return c.redirect("/");
+  return c.html(PAGE_EXERCICE);
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour

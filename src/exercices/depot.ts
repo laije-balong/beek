@@ -7,6 +7,7 @@ export interface DepotExercices {
   // Cree ou remplace l'exercice de meme identifiant (rechargement, EM-CON-07).
   remplacer(exercice: Exercice): Promise<void>;
   parIdentifiant(identifiant: string): Promise<Exercice | null>;
+  tous(): Promise<Exercice[]>;
   existeIdentifiant(identifiant: string): Promise<boolean>;
   parNotion(notionId: string): Promise<Exercice[]>;
   nombreParNotion(notionId: string): Promise<number>;

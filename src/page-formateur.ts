@@ -71,6 +71,13 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Exercices (recette)</legend>
+<button id="btnRecette">Charger les exercices de la recette</button>
+<p id="recette-etat"></p>
+<ul id="liste-exercices"></ul>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -218,6 +225,28 @@ document.getElementById('btnFilRouge').onclick=async function(){
   await chargerFilsRouges();
 };
 chargerFilsRouges();
+
+// Exercices de la recette.
+async function chargerListeExercices(){
+  var liste=await (await fetch('/formateur/exercices')).json();
+  var ul=document.getElementById('liste-exercices');ul.innerHTML='';
+  liste.forEach(function(e){
+    var li=document.createElement('li');
+    var a=document.createElement('a');a.href='/test-exercice?id='+encodeURIComponent(e.identifiant);
+    a.textContent=e.identifiant+' ('+e.type+') : '+e.titre;
+    li.appendChild(a);ul.appendChild(li);
+  });
+}
+document.getElementById('btnRecette').onclick=async function(){
+  document.getElementById('recette-etat').textContent='Chargement...';
+  var r=await fetch('/formateur/charger-recette',{method:'POST'});
+  var d=await r.json();
+  var msg='Charges : '+d.charges.length;
+  if(d.erreurs&&d.erreurs.length)msg+=' | Erreurs : '+d.erreurs.join(' ; ');
+  document.getElementById('recette-etat').textContent=msg;
+  await chargerListeExercices();
+};
+chargerListeExercices();
 
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});
