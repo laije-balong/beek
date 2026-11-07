@@ -4,7 +4,11 @@ import { DepotComptesD1, type BaseD1 } from "./comptes/depot-d1";
 import { ServiceComptes } from "./comptes/service";
 import { horlogeSysteme } from "./comptes/temps";
 import { DepotContenuD1 } from "./contenu/depot-d1";
+import type { DepotContenu } from "./contenu/depot";
 import { ServiceContenu } from "./contenu/service";
+import { DepotExercicesD1 } from "./exercices/depot-d1";
+import type { DepotExercices } from "./exercices/depot";
+import type { ContexteControle } from "./exercices/controles";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -31,6 +35,29 @@ export function construireServiceComptes(env: Env): ServiceComptes {
 // Assemble le service de la taxonomie du contenu.
 export function construireServiceContenu(env: Env): ServiceContenu {
   return new ServiceContenu(new DepotContenuD1(env.DB));
+}
+
+// Assemble le depot des exercices.
+export function construireDepotExercices(env: Env): DepotExercices {
+  return new DepotExercicesD1(env.DB);
+}
+
+// Contexte des controles 3 et 4 : la notion et le fil rouge existent, et
+// l'identifiant est libre. Construit a partir des deux depots.
+export function contexteControle(
+  depotContenu: DepotContenu,
+  depotExercices: DepotExercices
+): ContexteControle {
+  return {
+    notionExiste: async (id) => (await depotContenu.notionParId(id)) !== null,
+    filRougeExiste: async (id) => (await depotContenu.filRougeParId(id)) !== null,
+    identifiantExiste: (id) => depotExercices.existeIdentifiant(id),
+  };
+}
+
+// Contexte des controles a partir des liaisons du Worker.
+export function contexteControleD1(env: Env): ContexteControle {
+  return contexteControle(new DepotContenuD1(env.DB), new DepotExercicesD1(env.DB));
 }
 
 // Assemble le signataire de session.

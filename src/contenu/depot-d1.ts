@@ -117,10 +117,12 @@ export class DepotContenuD1 implements DepotContenu {
   async supprimerNotion(id: string): Promise<void> {
     await this.#db.prepare("DELETE FROM notion WHERE id = ?").bind(id).run();
   }
-  async nombreExercicesDeNotion(_notionId: string): Promise<number> {
-    // La table des exercices arrive en iteration 3. Sans elle, aucune notion
-    // n'est encore utilisee, donc la garde US-05 CA4 compte zero.
-    return 0;
+  async nombreExercicesDeNotion(notionId: string): Promise<number> {
+    const l = await this.#db
+      .prepare("SELECT COUNT(*) AS n FROM exercice WHERE notion_id = ?")
+      .bind(notionId)
+      .first<{ n: number }>();
+    return l?.n ?? 0;
   }
 
   async creerFilRouge(filRouge: FilRouge): Promise<void> {
@@ -144,9 +146,12 @@ export class DepotContenuD1 implements DepotContenu {
   async supprimerFilRouge(id: string): Promise<void> {
     await this.#db.prepare("DELETE FROM fil_rouge WHERE id = ?").bind(id).run();
   }
-  async nombreElementsDuFilRouge(_filRougeId: string): Promise<number> {
-    // Exercices, defis et programmes arrivent plus tard. Sans eux, aucun fil
-    // rouge n'est encore utilise, donc la garde US-06 CA3 compte zero.
-    return 0;
+  async nombreElementsDuFilRouge(filRougeId: string): Promise<number> {
+    // Exercices aujourd'hui. Les defis et programmes s'ajouteront a ce compte.
+    const l = await this.#db
+      .prepare("SELECT COUNT(*) AS n FROM exercice WHERE fil_rouge_id = ?")
+      .bind(filRougeId)
+      .first<{ n: number }>();
+    return l?.n ?? 0;
   }
 }
