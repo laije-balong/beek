@@ -2,6 +2,7 @@
 // retire la reponse attendue, les indices et l'explication (EM-EXE-03, critere 7).
 // Le navigateur ne recoit que de quoi afficher l'enonce et la zone de reponse.
 
+import { enonceVersHtml } from "./enonce";
 import type { Exercice, FormatCalcul, ImageExercice } from "./types";
 
 export type ContenuPublic =
@@ -22,7 +23,7 @@ export type ContenuPublic =
 export interface ExercicePublic {
   identifiant: string;
   titre: string;
-  enonce: string;
+  enonceHtml: string; // enonce mis en forme, HTML sur (voir enonce.ts)
   dureeMinutes: number;
   collageAutorise: boolean;
   images: ImageExercice[];
@@ -73,7 +74,7 @@ export function projeter(exercice: Exercice): ExercicePublic {
   return {
     identifiant: exercice.identifiant,
     titre: exercice.titre,
-    enonce: exercice.enonce,
+    enonceHtml: enonceVersHtml(exercice.enonce),
     dureeMinutes: exercice.dureeMinutes,
     collageAutorise: exercice.collageAutorise,
     images: exercice.images,

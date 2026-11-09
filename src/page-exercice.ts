@@ -10,8 +10,13 @@ export const PAGE_EXERCICE = `<!doctype html>
 <title>Beek, tester un exercice</title>
 <style>
 body{font-family:system-ui,sans-serif;margin:1.5rem;max-width:40rem}
-#enonce{white-space:pre-wrap;background:#f7f7f7;padding:.8rem;border-radius:.3rem}
-.code{font-family:ui-monospace,Consolas,monospace;white-space:pre}
+#enonce{background:#f7f7f7;padding:.8rem;border-radius:.3rem}
+#enonce h2{font-size:1.15rem;margin:.4rem 0}
+#enonce h3{font-size:1rem;margin:.4rem 0}
+#enonce table{border-collapse:collapse;margin:.5rem 0}
+#enonce th,#enonce td{border:1px solid #bbb;padding:.3rem .5rem;text-align:center}
+#enonce code{font-family:ui-monospace,Consolas,monospace;background:#eee;padding:0 .2rem;border-radius:.2rem}
+.code,#enonce pre.code{font-family:ui-monospace,Consolas,monospace;white-space:pre;background:#eee;padding:.5rem;border-radius:.3rem;overflow-x:auto}
 .zone{margin:1rem 0}
 .element{border:1px solid #ccc;padding:.4rem;margin:.3rem 0;display:flex;justify-content:space-between;align-items:center}
 .symboles button{margin-right:.3rem;font-family:ui-monospace,monospace}
@@ -156,7 +161,8 @@ async function charger(){
   if(r.status!==200){document.getElementById('titre').textContent='Exercice introuvable.';return;}
   ex=await r.json();
   document.getElementById('titre').textContent=ex.titre;
-  document.getElementById('enonce').textContent=ex.enonce;
+  // enonceHtml est produit et echappe par le serveur (voir enonce.ts).
+  document.getElementById('enonce').innerHTML=ex.enonceHtml;
   var zone=document.getElementById('zone');
   var rendu=rendus[ex.contenu.type];
   if(!rendu){zone.textContent='Ce type ('+ex.contenu.type+') n\\'est pas encore affiche.';document.getElementById('btnValider').style.display='none';return;}

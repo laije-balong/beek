@@ -41,6 +41,6 @@ describe("projection publique d'un exercice (EM-EXE-03, critere 7)", () => {
     expect(vf.contenu.trous[0].liste).toBe(true);
     expect(vf.contenu.trous[0].choix).toEqual(["Vrai", "Faux"]);
     expect(vf.titre).toBeTruthy();
-    expect(vf.enonce).toBeTruthy();
+    expect(vf.enonceHtml).toContain("<p>");
   });
 });
