@@ -163,6 +163,13 @@ async function charger(){
   document.getElementById('titre').textContent=ex.titre;
   // enonceHtml est produit et echappe par le serveur (voir enonce.ts).
   document.getElementById('enonce').innerHTML=ex.enonceHtml;
+  if(ex.images && ex.images.length){
+    ex.images.forEach(function(img){
+      var im=document.createElement('img');im.src='/images/'+encodeURIComponent(img.cle);
+      im.alt=img.texteAlternatif||'';im.style.maxWidth='100%';im.style.marginTop='.5rem';
+      document.getElementById('enonce').appendChild(im);
+    });
+  }
   var zone=document.getElementById('zone');
   var rendu=rendus[ex.contenu.type];
   if(!rendu){zone.textContent='Ce type ('+ex.contenu.type+') n\\'est pas encore affiche.';document.getElementById('btnValider').style.display='none';return;}

@@ -5,11 +5,14 @@ import {
   construireServiceContenu,
   construireDepotContenu,
   construireDepotExercices,
+  construireServiceImages,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
 import { ErreurContenu } from "./contenu/types";
+import { ErreurImage, typeMime } from "./images/service";
+import type { FormatImage } from "./exercices/types";
 import { projeter } from "./exercices/projection";
 import { corriger, type Soumission } from "./exercices/correction";
 import { chargerRecette } from "./exercices/seed-recette";
@@ -421,6 +424,43 @@ app.get("/exercices/:id/explication", async (c) => {
   const exercice = await construireDepotExercices(c.env).parIdentifiant(c.req.param("id"));
   if (!exercice) return c.json({ erreur: "exercice introuvable" }, 404);
   return c.json({ explication: exercice.explicationDetaillee });
+});
+
+// Envoi d'une image par le formateur. Les octets sont dans le corps, le format
+// et le texte alternatif en parametres. Range dans Workers KV (point 3.2).
+app.post("/formateur/images", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const octets = await c.req.arrayBuffer();
+  try {
+    const image = await construireServiceImages(c.env).stocker(
+      octets,
+      c.req.query("format") as FormatImage,
+      c.req.query("alt") ?? ""
+    );
+    return c.json(image);
+  } catch (e) {
+    if (e instanceof ErreurImage) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Affichage d'une image. Reserve a une session. Les SVG sont servis avec une
+// politique qui bloque tout script, et sont affiches par une balise image.
+app.get("/images/:cle", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session) return c.json({ erreur: "non connecte" }, 403);
+  const image = await construireServiceImages(c.env).lire(c.req.param("cle"));
+  if (!image) return c.json({ erreur: "image introuvable" }, 404);
+  const entetes: Record<string, string> = {
+    "content-type": typeMime(image.format),
+    "cache-control": "private, max-age=3600",
+    "x-content-type-options": "nosniff",
+  };
+  if (image.format === "svg") {
+    entetes["content-security-policy"] = "script-src 'none'; sandbox";
+  }
+  return new Response(image.octets, { headers: entetes });
 });
 
 // Ecran "tester un exercice" (EM-CON-06), reserve au formateur.

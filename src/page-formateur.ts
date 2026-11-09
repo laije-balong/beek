@@ -71,6 +71,15 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Images (Workers KV)</legend>
+<input type="file" id="img-fichier" accept="image/png,image/webp,image/svg+xml">
+<label>Texte alternatif</label><input type="text" id="img-alt">
+<button id="btnImage">Envoyer l'image</button>
+<p id="img-etat"></p>
+<div id="img-apercu"></div>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Exercices (recette)</legend>
 <button id="btnRecette">Charger les exercices de la recette</button>
 <p id="recette-etat"></p>
@@ -247,6 +256,19 @@ document.getElementById('btnRecette').onclick=async function(){
   await chargerListeExercices();
 };
 chargerListeExercices();
+
+document.getElementById('btnImage').onclick=async function(){
+  var f=document.getElementById('img-fichier').files[0];
+  if(!f){document.getElementById('img-etat').textContent='Choisissez un fichier.';return;}
+  var fmt=f.type.indexOf('svg')>=0?'svg':f.type.indexOf('png')>=0?'png':f.type.indexOf('webp')>=0?'webp':'';
+  var buf=await f.arrayBuffer();
+  var r=await fetch('/formateur/images?format='+fmt+'&alt='+encodeURIComponent(document.getElementById('img-alt').value),{method:'POST',body:buf});
+  var d=await r.json();
+  if(!d.cle){document.getElementById('img-etat').textContent='Erreur : '+d.erreur;return;}
+  document.getElementById('img-etat').textContent='Image rangee : '+d.cle+' ('+d.octets+' octets)';
+  var im=document.createElement('img');im.src='/images/'+d.cle;im.alt=d.texteAlternatif||'';im.style.maxWidth='12rem';im.style.display='block';im.style.marginTop='.5rem';
+  var z=document.getElementById('img-apercu');z.innerHTML='';z.appendChild(im);
+};
 
 document.getElementById('btnDeco').onclick=async function(){
   await fetch('/auth/deconnexion',{method:'POST'});

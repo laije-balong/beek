@@ -9,11 +9,14 @@ import { ServiceContenu } from "./contenu/service";
 import { DepotExercicesD1 } from "./exercices/depot-d1";
 import type { DepotExercices } from "./exercices/depot";
 import type { ContexteControle } from "./exercices/controles";
+import { ServiceImages } from "./images/service";
+import type { StockageKV } from "./images/kv";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
 export interface Env {
   DB: BaseD1;
+  IMAGES: StockageKV;
   POIVRE: string;
   SESSION_SECRET: string;
 }
@@ -40,6 +43,11 @@ export function construireServiceContenu(env: Env): ServiceContenu {
 // Depot de la taxonomie, pour les lectures hors du service.
 export function construireDepotContenu(env: Env): DepotContenu {
   return new DepotContenuD1(env.DB);
+}
+
+// Service de stockage des images dans Workers KV.
+export function construireServiceImages(env: Env): ServiceImages {
+  return new ServiceImages(env.IMAGES);
 }
 
 // Assemble le depot des exercices.
