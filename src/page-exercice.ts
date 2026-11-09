@@ -151,6 +151,20 @@ var rendus = {
     var ch=champTexte(false);zone.appendChild(ch.wrap);
     if(c.unite)ch.wrap.appendChild(document.createTextNode(' '+c.unite));
     return function(){return {type:'T09',saisie:ch.input.value};};
+  },
+  T07:function(c,zone){
+    zone.appendChild(creer('p','Corrigez l\\'erreur, puis validez.'));
+    var ta=document.createElement('textarea');ta.className='code';ta.rows=6;ta.style.width='100%';
+    ta.value=c.depart;ta.onfocus=function(){dernierChamp=ta;};
+    zone.appendChild(ta);zone.appendChild(barreSymboles(ta));
+    return function(){return {type:'T07',saisie:ta.value};};
+  },
+  T10:function(c,zone){
+    zone.appendChild(creer('p',c.consigne));
+    if(c.lienTP){var a=document.createElement('a');a.href=c.lienTP;a.target='_blank';a.rel='noopener';a.textContent='Ouvrir le TP';zone.appendChild(a);}
+    zone.appendChild(creer('p','Code obtenu a la fin du TP :'));
+    var ch=champTexte(false);zone.appendChild(ch.wrap);
+    return function(){return {type:'T10',saisie:ch.input.value};};
   }
 };
 

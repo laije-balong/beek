@@ -158,6 +158,58 @@ describe("moteur de correction (UC-05)", () => {
     expect(corriger(ex, { type: "T09", saisie: "0000" }).indice).toBe("indice generique");
   });
 
+  it("recherche d'erreur : version corrigee juste, erreur prevue avec indice (T07)", () => {
+    const ex: Exercice = {
+      identifiant: "X-T07",
+      nature: "exercice",
+      titre: "t",
+      notionId: "n",
+      filRougeId: null,
+      dureeMinutes: 5,
+      enonce: "q",
+      images: [],
+      collageAutorise: true,
+      indiceGenerique: "indice generique",
+      explicationDetaillee: "exp",
+      contenu: {
+        type: "T07",
+        depart: "=SOMME(A1:A10",
+        mode: "exact",
+        versionsAcceptees: ["=SOMME(A1:A10)"],
+        erreursPrevues: [{ valeur: "=SOMME(A1:A10))", indice: "Verifiez les parentheses." }],
+      },
+    };
+    expect(corriger(ex, { type: "T07", saisie: "=SOMME(A1:A10)" }).juste).toBe(true);
+    expect(corriger(ex, { type: "T07", saisie: "=SOMME(A1:A10))" }).indice).toMatch(/parentheses/);
+    expect(corriger(ex, { type: "T07", saisie: "=TOTAL(A1:A10)" }).indice).toBe("indice generique");
+  });
+
+  it("code de validation : code juste sans casse ni espaces, erreur prevue (T10)", () => {
+    const ex: Exercice = {
+      identifiant: "X-T10",
+      nature: "exercice",
+      titre: "t",
+      notionId: "n",
+      filRougeId: null,
+      dureeMinutes: 5,
+      enonce: "q",
+      images: [],
+      collageAutorise: true,
+      indiceGenerique: "indice generique",
+      explicationDetaillee: "exp",
+      contenu: {
+        type: "T10",
+        consigne: "Faites le TP puis saisissez le code.",
+        lienTP: "https://exemple.fr/tp",
+        codesAcceptes: ["MWINDA42"],
+        erreursPrevues: [{ valeur: "TP1", indice: "Ce code est celui du TP precedent." }],
+      },
+    };
+    expect(corriger(ex, { type: "T10", saisie: "mwinda 42" }).juste).toBe(true);
+    expect(corriger(ex, { type: "T10", saisie: "TP1" }).indice).toMatch(/precedent/);
+    expect(corriger(ex, { type: "T10", saisie: "ZZZ" }).indice).toBe("indice generique");
+  });
+
   it("refuse une soumission d'un autre type que l'exercice", () => {
     const ex = recette("MACH-DEC-S08E03"); // T02
     expect(() => corriger(ex, { type: "T09", saisie: "6" })).toThrow();

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { projeter } from "../../src/exercices/projection";
 import { EXERCICES_RECETTE } from "../../src/exercices/donnees/recette";
+import type { Exercice } from "../../src/exercices/types";
 
 const CHAMPS_CACHES = [
   "reponsesAcceptees",
@@ -32,6 +33,46 @@ describe("projection publique d'un exercice (EM-EXE-03, critere 7)", () => {
     expect(JSON.stringify(bin)).not.toContain("0110");
     const sym = projeter(EXERCICES_RECETTE.find((e) => e.identifiant === "LOGI-DEC-S09E04")!);
     expect(JSON.stringify(sym)).not.toContain("≥");
+  });
+
+  it("masque la reponse de la recherche d'erreur et du code de validation (T07, T10)", () => {
+    const commun = {
+      nature: "exercice" as const,
+      titre: "t",
+      notionId: "n",
+      filRougeId: null,
+      dureeMinutes: 5,
+      enonce: "q",
+      images: [],
+      collageAutorise: true,
+      indiceGenerique: "g",
+      explicationDetaillee: "e",
+    };
+    const t07: Exercice = {
+      ...commun,
+      identifiant: "X-T07",
+      contenu: {
+        type: "T07",
+        depart: "=SOMME(A1:A10",
+        mode: "exact",
+        versionsAcceptees: ["=SOMME(A1:A10)"],
+        erreursPrevues: [],
+      },
+    };
+    const t10: Exercice = {
+      ...commun,
+      identifiant: "X-T10",
+      contenu: {
+        type: "T10",
+        consigne: "c",
+        lienTP: "https://exemple.fr/tp",
+        codesAcceptes: ["MWINDA42"],
+        erreursPrevues: [],
+      },
+    };
+    expect(JSON.stringify(projeter(t07))).not.toContain("versionsAcceptees");
+    expect(JSON.stringify(projeter(t10))).not.toContain("codesAcceptes");
+    expect(JSON.stringify(projeter(t10))).not.toContain("MWINDA42");
   });
 
   it("garde le contenu public utile a l'affichage", () => {
