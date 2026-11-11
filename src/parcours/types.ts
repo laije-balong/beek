@@ -16,6 +16,44 @@ export interface ElementProgramme {
   exerciceIdentifiant: string;
 }
 
+// Statut d'un element de programme pour un apprenant (annexe B.2). Les trois
+// derniers forment le "termine" du glossaire.
+export type StatutElement =
+  | "verrouille"
+  | "disponible"
+  | "en-cours"
+  | "reussi"
+  | "reussi-avec-explication"
+  | "passe-par-le-formateur";
+
+// Les statuts qui comptent comme termine (annexe B.2).
+export const STATUTS_TERMINE: StatutElement[] = [
+  "reussi",
+  "reussi-avec-explication",
+  "passe-par-le-formateur",
+];
+
+export interface Attribution {
+  id: string;
+  apprenantId: string;
+  programmeId: string;
+  date: number;
+}
+
+// Progression d'un apprenant sur un element d'un programme (annexe D).
+export interface ProgressionElement {
+  id: string;
+  attributionId: string;
+  elementId: string;
+  statut: StatutElement;
+  reponsesFausses: number;
+  dateExplication: number | null;
+  xpGagnes: boolean;
+  dateOuverture: number | null;
+  dateFin: number | null;
+  tempsPasseMs: number;
+}
+
 export class ErreurParcours extends Error {
   constructor(message: string) {
     super(message);
