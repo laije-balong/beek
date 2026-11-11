@@ -84,6 +84,7 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 <button id="btnRecette">Charger les exercices de la recette</button>
 <p id="recette-etat"></p>
 <ul id="liste-exercices"></ul>
+<p><a href="/composer-programme">Composer un programme</a></p>
 </fieldset>
 
 <fieldset class="noprint">

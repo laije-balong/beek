@@ -51,6 +51,11 @@ export class DepotContenuMemoire implements DepotContenu {
       (f) => structuredClone(f)
     );
   }
+  async filieresToutes(): Promise<Filiere[]> {
+    return [...this.#filieres.values()]
+      .sort((a, b) => a.nom.localeCompare(b.nom))
+      .map((f) => structuredClone(f));
+  }
   async niveauParId(id: string): Promise<Niveau | null> {
     const n = this.#niveaux.get(id);
     return n ? structuredClone(n) : null;

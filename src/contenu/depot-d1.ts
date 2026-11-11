@@ -65,6 +65,12 @@ export class DepotContenuD1 implements DepotContenu {
       .all<{ id: string; nom: string; ordre: number; domaine_id: string }>();
     return results.map((l) => ({ id: l.id, nom: l.nom, ordre: l.ordre, domaineId: l.domaine_id }));
   }
+  async filieresToutes(): Promise<Filiere[]> {
+    const { results } = await this.#db
+      .prepare("SELECT id, nom, ordre, domaine_id FROM filiere ORDER BY nom")
+      .all<{ id: string; nom: string; ordre: number; domaine_id: string }>();
+    return results.map((l) => ({ id: l.id, nom: l.nom, ordre: l.ordre, domaineId: l.domaine_id }));
+  }
   async niveauParId(id: string): Promise<Niveau | null> {
     const l = await this.#db
       .prepare("SELECT id, nom, ordre, filiere_id FROM niveau WHERE id = ?")

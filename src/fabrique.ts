@@ -11,6 +11,8 @@ import type { DepotExercices } from "./exercices/depot";
 import type { ContexteControle } from "./exercices/controles";
 import { ServiceImages } from "./images/service";
 import type { StockageKV } from "./images/kv";
+import { DepotProgrammesD1 } from "./parcours/depot-d1";
+import { ServiceProgrammes } from "./parcours/service";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -48,6 +50,15 @@ export function construireDepotContenu(env: Env): DepotContenu {
 // Service de stockage des images dans Workers KV.
 export function construireServiceImages(env: Env): ServiceImages {
   return new ServiceImages(env.IMAGES);
+}
+
+// Service de composition des programmes.
+export function construireServiceProgrammes(env: Env): ServiceProgrammes {
+  return new ServiceProgrammes(
+    new DepotProgrammesD1(env.DB),
+    new DepotContenuD1(env.DB),
+    new DepotExercicesD1(env.DB)
+  );
 }
 
 // Assemble le depot des exercices.

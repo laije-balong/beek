@@ -13,6 +13,7 @@ export interface DepotContenu {
   filiereParId(id: string): Promise<Filiere | null>;
   filiereParNomDansDomaine(domaineId: string, nom: string): Promise<Filiere | null>;
   filieresDuDomaine(domaineId: string): Promise<Filiere[]>;
+  filieresToutes(): Promise<Filiere[]>;
   niveauParId(id: string): Promise<Niveau | null>;
   niveauxDeFiliere(filiereId: string): Promise<Niveau[]>;
 

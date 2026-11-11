@@ -6,6 +6,7 @@ import {
   construireDepotContenu,
   construireDepotExercices,
   construireServiceImages,
+  construireServiceProgrammes,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
@@ -13,10 +14,12 @@ import { ErreurCompte } from "./comptes/types";
 import { ErreurContenu } from "./contenu/types";
 import { ErreurImage, typeMime } from "./images/service";
 import type { FormatImage } from "./exercices/types";
+import { ErreurParcours } from "./parcours/types";
 import { projeter } from "./exercices/projection";
 import { corriger, type Soumission } from "./exercices/correction";
 import { chargerRecette } from "./exercices/seed-recette";
 import { PAGE_EXERCICE } from "./page-exercice";
+import { PAGE_PROGRAMMES } from "./page-programmes";
 import { DUREE_SESSION } from "./auth/session";
 import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
@@ -468,6 +471,104 @@ app.get("/test-exercice", async (c) => {
   const s = await formateurOuRefus(c);
   if (s instanceof Response) return c.redirect("/");
   return c.html(PAGE_EXERCICE);
+});
+
+// Toutes les filieres, pour choisir celle d'un programme.
+app.get("/formateur/filieres-toutes", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const filieres = await construireDepotContenu(c.env).filieresToutes();
+  return c.json(filieres.map((f) => ({ id: f.id, nom: f.nom })));
+});
+
+// Programmes, reserves au formateur (US-07).
+app.post("/formateur/programmes", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const corps = await c.req.json<{ nom: string; filiereId: string; filRougeId?: string | null }>();
+  try {
+    const programme = await construireServiceProgrammes(c.env).creerProgramme(
+      corps.nom,
+      corps.filiereId,
+      corps.filRougeId ?? null
+    );
+    return c.json(programme);
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.get("/formateur/programmes", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  return c.json(await construireServiceProgrammes(c.env).programmes());
+});
+
+// Detail d'un programme : sa filiere, son fil rouge, ses elements et les
+// exercices ajoutables.
+app.get("/formateur/programmes/:id", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const service = construireServiceProgrammes(c.env);
+  const programme = await service.programmeParId(c.req.param("id"));
+  if (!programme) return c.json({ erreur: "programme introuvable" }, 404);
+  const contenu = construireDepotContenu(c.env);
+  const filiere = await contenu.filiereParId(programme.filiereId);
+  const filRouge = programme.filRougeId ? await contenu.filRougeParId(programme.filRougeId) : null;
+  return c.json({
+    programme,
+    filiereNom: filiere?.nom ?? null,
+    filRougeNom: filRouge?.nom ?? null,
+    elements: await service.elementsDetailles(programme.id),
+    ajoutables: await service.elementsAjoutables(programme.id),
+  });
+});
+
+app.post("/formateur/programmes/:id/elements", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { exerciceIdentifiant } = await c.req.json<{ exerciceIdentifiant: string }>();
+  try {
+    return c.json(
+      await construireServiceProgrammes(c.env).ajouterElement(c.req.param("id"), exerciceIdentifiant)
+    );
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.delete("/formateur/programmes/elements/:elementId", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  try {
+    await construireServiceProgrammes(c.env).retirerElement(c.req.param("elementId"));
+    return c.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+app.post("/formateur/programmes/:id/ordre", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { ordre } = await c.req.json<{ ordre: string[] }>();
+  try {
+    await construireServiceProgrammes(c.env).reordonner(c.req.param("id"), ordre);
+    return c.json({ ok: true });
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Ecran de composition d'un programme, reserve au formateur.
+app.get("/composer-programme", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return c.redirect("/");
+  return c.html(PAGE_PROGRAMMES);
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour
