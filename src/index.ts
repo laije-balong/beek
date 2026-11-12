@@ -4,9 +4,11 @@ import {
   construireServiceComptes,
   construireServiceContenu,
   construireDepotContenu,
+  construireDepotComptes,
   construireDepotExercices,
   construireServiceImages,
   construireServiceProgrammes,
+  construireServiceAttributions,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
@@ -20,6 +22,7 @@ import { corriger, type Soumission } from "./exercices/correction";
 import { chargerRecette } from "./exercices/seed-recette";
 import { PAGE_EXERCICE } from "./page-exercice";
 import { PAGE_PROGRAMMES } from "./page-programmes";
+import { PAGE_TABLEAU_DE_BORD } from "./page-tableau-de-bord";
 import { DUREE_SESSION } from "./auth/session";
 import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
@@ -569,6 +572,82 @@ app.get("/composer-programme", async (c) => {
   const s = await formateurOuRefus(c);
   if (s instanceof Response) return c.redirect("/");
   return c.html(PAGE_PROGRAMMES);
+});
+
+// Liste des apprenants, pour attribuer un programme.
+app.get("/formateur/apprenants-liste", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const liste = await construireDepotComptes(c.env).apprenants();
+  return c.json(liste.map((a) => ({ id: a.id, nom: a.nom, email: a.email })));
+});
+
+// Attribution d'un programme a un apprenant (UC-04), reservee au formateur.
+app.post("/formateur/attributions", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const corps = await c.req.json<{
+    apprenantId: string;
+    programmeId: string;
+    elementDepartId?: string;
+  }>();
+  try {
+    const attribution = await construireServiceAttributions(c.env).attribuer(
+      corps.apprenantId,
+      corps.programmeId,
+      corps.elementDepartId
+    );
+    return c.json(attribution);
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Tableau de bord de l'apprenant (E-03) : ses programmes et le statut de chaque
+// element. Reserve a l'apprenant.
+app.get("/mes-programmes", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "apprenant") return c.json({ erreur: "reserve a l'apprenant" }, 403);
+  const attributions = construireServiceAttributions(c.env);
+  const programmes = construireServiceProgrammes(c.env);
+  const contenu = construireDepotContenu(c.env);
+  const resultat = [];
+  for (const attribution of await attributions.attributionsDeLApprenant(session.id)) {
+    const programme = await programmes.programmeParId(attribution.programmeId);
+    if (!programme) continue;
+    const filiere = await contenu.filiereParId(programme.filiereId);
+    const filRouge = programme.filRougeId
+      ? await contenu.filRougeParId(programme.filRougeId)
+      : null;
+    const elements = await programmes.elementsDetailles(programme.id);
+    const statuts = new Map(
+      (await attributions.progressionsDeLAttribution(attribution.id)).map((p) => [
+        p.elementId,
+        p.statut,
+      ])
+    );
+    resultat.push({
+      programmeId: programme.id,
+      nom: programme.nom,
+      filiereNom: filiere?.nom ?? null,
+      filRougeNom: filRouge?.nom ?? null,
+      elements: elements.map((e) => ({
+        elementId: e.id,
+        titre: e.titre,
+        type: e.type,
+        statut: statuts.get(e.id) ?? "verrouille",
+      })),
+    });
+  }
+  return c.json(resultat);
+});
+
+// Ecran du tableau de bord de l'apprenant.
+app.get("/tableau-de-bord", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "apprenant") return c.redirect("/");
+  return c.html(PAGE_TABLEAU_DE_BORD);
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour

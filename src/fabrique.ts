@@ -1,6 +1,7 @@
 import { AuthHachagePartage } from "./auth/hachage-partage";
 import { SignataireSession } from "./auth/session";
 import { DepotComptesD1, type BaseD1 } from "./comptes/depot-d1";
+import type { DepotComptes } from "./comptes/depot";
 import { ServiceComptes } from "./comptes/service";
 import { horlogeSysteme } from "./comptes/temps";
 import { DepotContenuD1 } from "./contenu/depot-d1";
@@ -13,6 +14,8 @@ import { ServiceImages } from "./images/service";
 import type { StockageKV } from "./images/kv";
 import { DepotProgrammesD1 } from "./parcours/depot-d1";
 import { ServiceProgrammes } from "./parcours/service";
+import { DepotAttributionsD1 } from "./parcours/depot-attribution-d1";
+import { ServiceAttributions } from "./parcours/service-attribution";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -21,6 +24,11 @@ export interface Env {
   IMAGES: StockageKV;
   POIVRE: string;
   SESSION_SECRET: string;
+}
+
+// Depot des comptes, pour les lectures hors du service.
+export function construireDepotComptes(env: Env): DepotComptes {
+  return new DepotComptesD1(env.DB);
 }
 
 // Assemble le service des comptes a partir des liaisons du Worker.
@@ -58,6 +66,16 @@ export function construireServiceProgrammes(env: Env): ServiceProgrammes {
     new DepotProgrammesD1(env.DB),
     new DepotContenuD1(env.DB),
     new DepotExercicesD1(env.DB)
+  );
+}
+
+// Service d'attribution des programmes aux apprenants.
+export function construireServiceAttributions(env: Env): ServiceAttributions {
+  return new ServiceAttributions(
+    new DepotAttributionsD1(env.DB),
+    new DepotProgrammesD1(env.DB),
+    new DepotComptesD1(env.DB),
+    horlogeSysteme
   );
 }
 

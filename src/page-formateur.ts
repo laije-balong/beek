@@ -88,6 +88,14 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Attribuer un programme (UC-04)</legend>
+<label>Apprenant</label><select id="att-apprenant"></select>
+<label>Programme</label><select id="att-programme"></select>
+<button id="btnAttribuer">Attribuer</button>
+<p id="att-etat"></p>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -257,6 +265,22 @@ document.getElementById('btnRecette').onclick=async function(){
   await chargerListeExercices();
 };
 chargerListeExercices();
+
+// Attribution d'un programme a un apprenant.
+async function chargerAttribution(){
+  var apprenants=await (await fetch('/formateur/apprenants-liste')).json();
+  var sa=document.getElementById('att-apprenant');sa.innerHTML='';
+  apprenants.forEach(function(a){var o=document.createElement('option');o.value=a.id;o.textContent=a.nom+' ('+a.email+')';sa.appendChild(o);});
+  var programmes=await (await fetch('/formateur/programmes')).json();
+  var sp=document.getElementById('att-programme');sp.innerHTML='';
+  programmes.forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.nom;sp.appendChild(o);});
+}
+document.getElementById('btnAttribuer').onclick=async function(){
+  var r=await fetch('/formateur/attributions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({apprenantId:document.getElementById('att-apprenant').value,programmeId:document.getElementById('att-programme').value})});
+  var d=await r.json();
+  document.getElementById('att-etat').textContent=d.id?'Programme attribue.':('Erreur : '+d.erreur);
+};
+chargerAttribution();
 
 document.getElementById('btnImage').onclick=async function(){
   var f=document.getElementById('img-fichier').files[0];

@@ -134,6 +134,13 @@ export class DepotComptesD1 implements DepotComptes {
     return l !== null;
   }
 
+  async apprenants(): Promise<Compte[]> {
+    const { results } = await this.#db
+      .prepare("SELECT * FROM compte WHERE role = 'apprenant' ORDER BY nom")
+      .all<LigneCompte>();
+    return results.map(versCompte);
+  }
+
   async creer(compte: Compte): Promise<void> {
     try {
       await this.#db

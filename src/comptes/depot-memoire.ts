@@ -40,4 +40,10 @@ export class DepotComptesMemoire implements DepotComptes {
     }
     return false;
   }
+
+  async apprenants(): Promise<Compte[]> {
+    return [...this.#parId.values()]
+      .filter((c) => c.role === "apprenant")
+      .map((c) => structuredClone(c));
+  }
 }

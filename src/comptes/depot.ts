@@ -9,4 +9,6 @@ export interface DepotComptes {
   mettreAJour(compte: Compte): Promise<void>;
   // Vrai si au moins un compte formateur existe, pour l'amorcage du premier.
   existeFormateur(): Promise<boolean>;
+  // Les comptes apprenants, pour le choix lors d'une attribution.
+  apprenants(): Promise<Compte[]>;
 }
