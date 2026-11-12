@@ -17,6 +17,8 @@ import { ServiceProgrammes } from "./parcours/service";
 import { DepotAttributionsD1 } from "./parcours/depot-attribution-d1";
 import { ServiceAttributions } from "./parcours/service-attribution";
 import { ServiceRealisation } from "./parcours/service-realisation";
+import { DepotCommentairesD1 } from "./commentaires/depot-d1";
+import { ServiceCommentaires } from "./commentaires/service";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -93,6 +95,11 @@ export function construireServiceRealisation(env: Env): ServiceRealisation {
 // Assemble le depot des exercices.
 export function construireDepotExercices(env: Env): DepotExercices {
   return new DepotExercicesD1(env.DB);
+}
+
+// Service des commentaires sous un exercice (UC-05 A9, EM-AID-04).
+export function construireServiceCommentaires(env: Env): ServiceCommentaires {
+  return new ServiceCommentaires(new DepotCommentairesD1(env.DB), horlogeSysteme);
 }
 
 // Contexte des controles 3 et 4 : la notion et le fil rouge existent, et

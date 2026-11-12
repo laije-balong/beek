@@ -96,6 +96,13 @@ button{margin-top:.7rem;padding:.5rem 1rem}
 </fieldset>
 
 <fieldset class="noprint">
+<legend>Commentaires des apprenants (UC-05 A9)</legend>
+<button id="btnFils">Rafraichir</button>
+<ul id="liste-fils"></ul>
+<div id="fil-ouvert"></div>
+</fieldset>
+
+<fieldset class="noprint">
 <legend>Session</legend>
 <button id="btnDeco">Se deconnecter</button>
 </fieldset>
@@ -281,6 +288,41 @@ document.getElementById('btnAttribuer').onclick=async function(){
   document.getElementById('att-etat').textContent=d.id?'Programme attribue.':('Erreur : '+d.erreur);
 };
 chargerAttribution();
+
+// Commentaires des apprenants (UC-05 A9). Le formateur ouvre un fil et repond,
+// sans limite en nombre (RG-32, RG-33), mais 500 caracteres au plus (RG-31).
+async function chargerFils(){
+  var liste=await (await fetch('/formateur/commentaires')).json();
+  var ul=document.getElementById('liste-fils');ul.innerHTML='';
+  if(!liste.length){var vide=document.createElement('li');vide.textContent='Aucun echange pour le moment.';ul.appendChild(vide);return;}
+  liste.forEach(function(f){
+    var li=document.createElement('li');
+    var b=document.createElement('button');
+    b.textContent=f.apprenantNom+' : '+f.exerciceIdentifiant+' ('+f.nombre+')'+(f.enAttente?' - en attente':'');
+    b.onclick=function(){ouvrirFil(f.apprenantId,f.apprenantNom,f.exerciceIdentifiant);};
+    li.appendChild(b);ul.appendChild(li);
+  });
+}
+async function ouvrirFil(apprenantId,apprenantNom,exerciceId){
+  var base='/formateur/apprenants/'+encodeURIComponent(apprenantId)+'/exercices/'+encodeURIComponent(exerciceId)+'/commentaires';
+  var fil=await (await fetch(base)).json();
+  var zone=document.getElementById('fil-ouvert');zone.innerHTML='';
+  var h=document.createElement('h3');h.textContent=apprenantNom+' . '+exerciceId;zone.appendChild(h);
+  fil.forEach(function(m){var p=document.createElement('p');p.textContent=(m.auteur==='formateur'?'Formateur : ':'Apprenant : ')+m.texte;zone.appendChild(p);});
+  var ta=document.createElement('textarea');ta.maxLength=500;ta.rows=3;ta.style.width='100%';zone.appendChild(ta);
+  var err=document.createElement('p');err.className='avert';zone.appendChild(err);
+  var b=document.createElement('button');b.textContent='Repondre';
+  b.onclick=async function(){
+    err.textContent='';
+    var r=await fetch(base,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({texte:ta.value})});
+    var d=await r.json();
+    if(r.status!==200){err.textContent=d.erreur||'Envoi refuse.';return;}
+    await ouvrirFil(apprenantId,apprenantNom,exerciceId);await chargerFils();
+  };
+  zone.appendChild(b);
+}
+document.getElementById('btnFils').onclick=chargerFils;
+chargerFils();
 
 document.getElementById('btnImage').onclick=async function(){
   var f=document.getElementById('img-fichier').files[0];

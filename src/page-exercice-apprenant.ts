@@ -38,6 +38,14 @@ button{padding:.4rem .8rem}
 .explication{background:#f2f2f2;border:1px solid #ccc}
 .termine{color:#555;margin-top:.6rem}
 a{display:inline-block;margin-bottom:1rem}
+#echange{margin-top:2rem;border-top:1px solid #ddd;padding-top:1rem}
+#echange h2{font-size:1.1rem}
+.message{padding:.4rem .6rem;border-radius:.3rem;margin:.3rem 0}
+.message.apprenant{background:#eef3fb}
+.message.formateur{background:#eef7ee}
+.message strong{display:block;font-size:.85rem;color:#444}
+#msg{width:100%;padding:.4rem;box-sizing:border-box}
+.erreur{color:#9a2222;margin:.3rem 0}
 #masque{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center}
 #dialogue{background:#fff;padding:1.2rem;border-radius:.5rem;max-width:26rem}
 #dialogue h2{margin:.2rem 0 .6rem;font-size:1.1rem}
@@ -55,6 +63,16 @@ a{display:inline-block;margin-bottom:1rem}
 <div id="compteur"></div>
 <button id="btnValider">Valider</button>
 <div id="apres"></div>
+
+<section id="echange">
+  <h2>Echanger avec votre formateur</h2>
+  <p class="hint">Seuls vous et votre formateur voyez ces messages.</p>
+  <div id="fil"></div>
+  <textarea id="msg" maxlength="500" rows="3" placeholder="Votre message"></textarea>
+  <div class="hint"><span id="restants">500</span> caracteres restants</div>
+  <button id="btnEnvoyer">Envoyer</button>
+  <div id="erreurMsg" class="erreur"></div>
+</section>
 
 <div id="masque">
   <div id="dialogue" role="dialog" aria-modal="true">
@@ -81,6 +99,7 @@ var TERMINE=['reussi','reussi-avec-explication','passe-par-le-formateur'];
 var elementId=new URLSearchParams(location.search).get('element');
 var lireSoumission=null;
 var collageAutorise=true;
+var exerciceId=null;
 
 function base(chemin){return '/apprenant/elements/'+encodeURIComponent(elementId)+chemin;}
 
@@ -162,6 +181,8 @@ async function ouvrir(){
   if(r.status!==200){document.getElementById('titre').textContent='Exercice indisponible.';document.getElementById('btnValider').style.display='none';return;}
   var d=await r.json();
   afficherEnonce(d.exercice);
+  exerciceId=d.exercice.identifiant;
+  chargerCommentaires();
   document.getElementById('meta').textContent+=' . '+(LIBELLES[d.statut]||d.statut);
   if(TERMINE.indexOf(d.statut)>=0){
     // Reouverture en lecture seule (A11, PS-05).
@@ -190,6 +211,35 @@ document.getElementById('btnVoir').onclick=async function(){
   if(r.status!==200)return;
   var d=await r.json();
   afficherExplication(d.explication);
+};
+
+// Echange avec le formateur (UC-05 A9, A12 a A14). Le serveur controle les limites.
+function afficherFil(fil){
+  var z=document.getElementById('fil');z.innerHTML='';
+  if(!fil.length){z.appendChild(creer('p','Aucun message pour cet exercice.')).className='hint';return;}
+  fil.forEach(function(m){
+    var d=creer('div');d.className='message '+m.auteur;
+    d.appendChild(creer('strong',m.auteur==='formateur'?'Formateur':'Vous'));
+    d.appendChild(creer('p',m.texte));
+    z.appendChild(d);
+  });
+}
+async function chargerCommentaires(){
+  if(!exerciceId)return;
+  var r=await fetch('/apprenant/exercices/'+encodeURIComponent(exerciceId)+'/commentaires');
+  if(r.status!==200)return;
+  afficherFil(await r.json());
+}
+var msg=document.getElementById('msg');
+msg.oninput=function(){document.getElementById('restants').textContent=String(500-msg.value.length);};
+document.getElementById('btnEnvoyer').onclick=async function(){
+  document.getElementById('erreurMsg').textContent='';
+  var r=await fetch('/apprenant/exercices/'+encodeURIComponent(exerciceId)+'/commentaires',
+    {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({texte:msg.value})});
+  var d=await r.json();
+  if(r.status!==200){document.getElementById('erreurMsg').textContent=d.erreur||'Envoi refuse.';return;}
+  msg.value='';document.getElementById('restants').textContent='500';
+  chargerCommentaires();
 };
 </script>
 </body>

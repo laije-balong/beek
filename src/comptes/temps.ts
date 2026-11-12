@@ -14,3 +14,9 @@ export const QUINZE_MINUTES = 15 * 60 * 1000;
 export function jourBrazzaville(epochMs: number): string {
   return new Date(epochMs + 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+
+// Debut du jour calendaire de Brazzaville qui contient epochMs, en epoch ms.
+// Sert au compteur quotidien des commentaires (RG-33).
+export function debutJourBrazzaville(epochMs: number): number {
+  return Date.parse(jourBrazzaville(epochMs) + "T00:00:00+01:00");
+}

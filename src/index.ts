@@ -10,11 +10,13 @@ import {
   construireServiceProgrammes,
   construireServiceAttributions,
   construireServiceRealisation,
+  construireServiceCommentaires,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
 import { ErreurCompte } from "./comptes/types";
 import { ErreurContenu } from "./contenu/types";
+import { ErreurCommentaire } from "./commentaires/types";
 import { ErreurImage, typeMime } from "./images/service";
 import type { FormatImage } from "./exercices/types";
 import { ErreurParcours } from "./parcours/types";
@@ -719,6 +721,87 @@ app.get("/exercice", async (c) => {
   const session = await sessionActuelle(c);
   if (!session || session.role !== "apprenant") return c.redirect("/");
   return c.html(PAGE_EXERCICE_APPRENANT);
+});
+
+// Fil des commentaires de l'apprenant sur un exercice (UC-05 A9). L'apprenant ne
+// voit que son propre fil (ENF-05).
+app.get("/apprenant/exercices/:exerciceId/commentaires", async (c) => {
+  const s = await apprenantOuRefus(c);
+  if (s instanceof Response) return s;
+  const fil = await construireServiceCommentaires(c.env).fil(s.id, c.req.param("exerciceId"));
+  return c.json(fil.map((m) => ({ auteur: m.auteur, texte: m.texte, date: m.date })));
+});
+
+// Envoi d'un commentaire par l'apprenant. Le serveur controle les limites
+// (RG-31 a RG-33, EM-AID-07), pas seulement la page.
+app.post("/apprenant/exercices/:exerciceId/commentaires", async (c) => {
+  const s = await apprenantOuRefus(c);
+  if (s instanceof Response) return s;
+  const { texte } = await c.req.json<{ texte: string }>();
+  try {
+    const m = await construireServiceCommentaires(c.env).publierApprenant(
+      s.id,
+      c.req.param("exerciceId"),
+      texte
+    );
+    return c.json({ auteur: m.auteur, texte: m.texte, date: m.date });
+  } catch (e) {
+    if (e instanceof ErreurCommentaire) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Liste des fils de commentaires, pour le formateur. Chaque fil porte le nom de
+// l'apprenant et le fait qu'il attende une reponse.
+app.get("/formateur/commentaires", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const service = construireServiceCommentaires(c.env);
+  const apprenants = await construireDepotComptes(c.env).apprenants();
+  const noms = new Map(apprenants.map((a) => [a.id, a.nom]));
+  const resultat = [];
+  for (const f of await service.fils()) {
+    const fil = await service.fil(f.apprenantId, f.exerciceIdentifiant);
+    const dernier = fil[fil.length - 1];
+    resultat.push({
+      apprenantId: f.apprenantId,
+      apprenantNom: noms.get(f.apprenantId) ?? f.apprenantId,
+      exerciceIdentifiant: f.exerciceIdentifiant,
+      nombre: fil.length,
+      enAttente: dernier?.auteur === "apprenant",
+    });
+  }
+  return c.json(resultat);
+});
+
+// Fil d'un apprenant sur un exercice, pour le formateur.
+app.get("/formateur/apprenants/:apprenantId/exercices/:exerciceId/commentaires", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const fil = await construireServiceCommentaires(c.env).fil(
+    c.req.param("apprenantId"),
+    c.req.param("exerciceId")
+  );
+  return c.json(fil.map((m) => ({ auteur: m.auteur, texte: m.texte, date: m.date })));
+});
+
+// Reponse du formateur dans le fil d'un apprenant. Sans limite en nombre (RG-32,
+// RG-33), mais la longueur est controlee (RG-31).
+app.post("/formateur/apprenants/:apprenantId/exercices/:exerciceId/commentaires", async (c) => {
+  const s = await formateurOuRefus(c);
+  if (s instanceof Response) return s;
+  const { texte } = await c.req.json<{ texte: string }>();
+  try {
+    const m = await construireServiceCommentaires(c.env).publierFormateur(
+      c.req.param("apprenantId"),
+      c.req.param("exerciceId"),
+      texte
+    );
+    return c.json({ auteur: m.auteur, texte: m.texte, date: m.date });
+  } catch (e) {
+    if (e instanceof ErreurCommentaire) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour
