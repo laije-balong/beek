@@ -9,6 +9,7 @@ import {
   construireServiceImages,
   construireServiceProgrammes,
   construireServiceAttributions,
+  construireServiceRealisation,
   construireSignataireSession,
   type Env,
 } from "./fabrique";
@@ -23,6 +24,7 @@ import { chargerRecette } from "./exercices/seed-recette";
 import { PAGE_EXERCICE } from "./page-exercice";
 import { PAGE_PROGRAMMES } from "./page-programmes";
 import { PAGE_TABLEAU_DE_BORD } from "./page-tableau-de-bord";
+import { PAGE_EXERCICE_APPRENANT } from "./page-exercice-apprenant";
 import { DUREE_SESSION } from "./auth/session";
 import { comparaisonConstante } from "./auth/hachage-partage";
 import { toHex, fromHex } from "./util/hex";
@@ -648,6 +650,75 @@ app.get("/tableau-de-bord", async (c) => {
   const session = await sessionActuelle(c);
   if (!session || session.role !== "apprenant") return c.redirect("/");
   return c.html(PAGE_TABLEAU_DE_BORD);
+});
+
+// Exige une session d'apprenant. Renvoie la session, ou une reponse 403.
+async function apprenantOuRefus(c: Context<{ Bindings: Bindings }>) {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "apprenant") {
+    return c.json({ erreur: "reserve a l'apprenant" }, 403);
+  }
+  return session;
+}
+
+// Ouverture d'un element par l'apprenant (UC-05, transition 7). Rend la
+// projection publique de l'exercice, sans reponse attendue (EM-EXE-03, critere 7).
+app.post("/apprenant/elements/:elementId/ouvrir", async (c) => {
+  const s = await apprenantOuRefus(c);
+  if (s instanceof Response) return s;
+  try {
+    const ouverture = await construireServiceRealisation(c.env).ouvrir(
+      s.id,
+      c.req.param("elementId")
+    );
+    return c.json(ouverture);
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Correction d'une reponse de l'apprenant (UC-05). Le serveur refuse tout envoi
+// qui ne passe pas par une session d'apprenant (critere 18).
+app.post("/apprenant/elements/:elementId/reponse", async (c) => {
+  const s = await apprenantOuRefus(c);
+  if (s instanceof Response) return s;
+  const soumission = await c.req.json<Soumission>();
+  try {
+    const resultat = await construireServiceRealisation(c.env).soumettre(
+      s.id,
+      c.req.param("elementId"),
+      soumission
+    );
+    return c.json(resultat);
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Voir l'explication (UC-05 A2 et A3, PS-04). Confirme cote navigateur, sans XP.
+// Le serveur revele l'explication et passe l'exercice en reussi avec explication.
+app.post("/apprenant/elements/:elementId/explication", async (c) => {
+  const s = await apprenantOuRefus(c);
+  if (s instanceof Response) return s;
+  try {
+    const resultat = await construireServiceRealisation(c.env).voirExplication(
+      s.id,
+      c.req.param("elementId")
+    );
+    return c.json(resultat);
+  } catch (e) {
+    if (e instanceof ErreurParcours) return c.json({ erreur: e.message }, 400);
+    throw e;
+  }
+});
+
+// Ecran d'exercice de l'apprenant (E-05), reserve a l'apprenant.
+app.get("/exercice", async (c) => {
+  const session = await sessionActuelle(c);
+  if (!session || session.role !== "apprenant") return c.redirect("/");
+  return c.html(PAGE_EXERCICE_APPRENANT);
 });
 
 // Espace du formateur, protege par la session de role formateur. Sinon, retour

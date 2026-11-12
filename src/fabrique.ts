@@ -16,6 +16,7 @@ import { DepotProgrammesD1 } from "./parcours/depot-d1";
 import { ServiceProgrammes } from "./parcours/service";
 import { DepotAttributionsD1 } from "./parcours/depot-attribution-d1";
 import { ServiceAttributions } from "./parcours/service-attribution";
+import { ServiceRealisation } from "./parcours/service-realisation";
 
 // Liaisons du Worker. DB est la base D1, POIVRE le secret du hachage,
 // SESSION_SECRET le secret de signature des sessions.
@@ -75,6 +76,16 @@ export function construireServiceAttributions(env: Env): ServiceAttributions {
     new DepotAttributionsD1(env.DB),
     new DepotProgrammesD1(env.DB),
     new DepotComptesD1(env.DB),
+    horlogeSysteme
+  );
+}
+
+// Service de realisation d'un exercice par l'apprenant (UC-05).
+export function construireServiceRealisation(env: Env): ServiceRealisation {
+  return new ServiceRealisation(
+    new DepotAttributionsD1(env.DB),
+    new DepotProgrammesD1(env.DB),
+    new DepotExercicesD1(env.DB),
     horlogeSysteme
   );
 }

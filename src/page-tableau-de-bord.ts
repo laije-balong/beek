@@ -54,8 +54,17 @@ async function charger(){
     p.elements.forEach(function(el){
       var ligne=creer('div');ligne.className='element';
       ligne.appendChild(creer('span',el.titre+' ('+el.type+')'));
+      var droite=creer('span');
       var s=creer('span',LIBELLES[el.statut]||el.statut);s.className='statut '+el.statut;
-      ligne.appendChild(s);bloc.appendChild(ligne);
+      droite.appendChild(s);
+      var actif=el.statut==='disponible'||el.statut==='en-cours';
+      var revoir=el.statut==='reussi'||el.statut==='reussi-avec-explication';
+      if(actif||revoir){
+        var a=document.createElement('a');a.href='/exercice?element='+encodeURIComponent(el.elementId);
+        a.textContent=actif?'Ouvrir':'Revoir';a.style.marginLeft='.8rem';
+        droite.appendChild(a);
+      }
+      ligne.appendChild(droite);bloc.appendChild(ligne);
     });
     zone.appendChild(bloc);
   });
